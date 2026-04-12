@@ -54,15 +54,18 @@ const DashboardPage = ({ onBack }) => {
 
       const row = { time: timeLabel };
 
+      if (!entry.predictions || !Array.isArray(entry.predictions)) return;
+
       entry.predictions.forEach((pred, pIdx) => {
-        const score = pred.health.includes("Healthy") ? 100 : (pred.health.includes("attention") ? 60 : 30);
+        const healthText = pred.health || "";
+        const score = healthText.includes("Healthy") ? 100 : (healthText.includes("attention") ? 60 : 30);
         row[pred.plant] = score;
 
         if (!stats[pred.plant]) stats[pred.plant] = { scores: [], waterInputs: [] };
         stats[pred.plant].scores.push(score);
 
         // Track water inputs for pattern analysis
-        const plantInput = entry.plants?.[pIdx];
+        const plantInput = Array.isArray(entry.plants) ? entry.plants[pIdx] : null;
         if (plantInput?.water) {
           stats[pred.plant].waterInputs.push(plantInput.water);
         }
