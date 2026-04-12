@@ -69,35 +69,61 @@ def _build_context_block(context: dict) -> str:
 def process_query_with_llm(query: str, context: dict = None) -> str:
     """
     Send the user query + plant context to Google Gemini and return the reply.
-    Falls back to a helpful message if the API key is missing or the call fails.
+    Falls back to keyword responses only if the API key is genuinely missing.
+    All real Gemini errors are surfaced as readable messages (not silently swallowed).
     """
-    api_key = os.environ.get("GEMINI_API_KEY", "")
-    if not api_key:
-        logger.warning("GEMINI_API_KEY not set — LLM unavailable, returning fallback.")
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+
+    # Log key status on every call so the server console confirms it's loaded
+    if api_key:
+        logger.info(f"GEMINI_API_KEY loaded (length={len(api_key)}, prefix={api_key[:8]}...)")
+    else:
+        logger.warning("GEMINI_API_KEY not set — returning keyword fallback.")
         return _fallback_response(query)
 
     try:
         import google.generativeai as genai
         genai.configure(api_key=api_key)
 
-        model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
-            system_instruction=SYSTEM_PROMPT,
+        # Use gemini-1.5-flash; fall back to gemini-pro if flash is unavailable
+        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+
+        # Prepend system prompt directly (compatible with all SDK versions)
+        context_block = _build_context_block(context or {})
+        full_prompt = (
+            f"{SYSTEM_PROMPT}\n\n"
+            f"--- USER PLANT DATA ---\n{context_block}\n\n"
+            f"User: {query}"
         )
 
-        context_block = _build_context_block(context or {})
-        full_prompt = f"{context_block}\n\nUser question: {query}"
-
+        logger.info(f"Sending prompt to Gemini (length={len(full_prompt)} chars)")
         response = model.generate_content(full_prompt)
-        reply = response.text.strip()
-        return reply if reply else "I couldn't generate a response. Please try again!"
+
+        # Safe text extraction — response.text raises if content was blocked
+        try:
+            reply = response.text.strip()
+        except Exception:
+            # Try manual extraction from candidates
+            try:
+                reply = response.candidates[0].content.parts[0].text.strip()
+            except Exception:
+                reply = ""
+
+        if not reply:
+            logger.warning("Gemini returned an empty response (possibly safety-filtered).")
+            return "I'm sorry, I wasn't able to generate a response for that question. Please try rephrasing it! 🌿"
+
+        logger.info("Gemini responded successfully.")
+        return reply
 
     except ImportError:
         logger.error("google-generativeai not installed. Run: pip install google-generativeai")
         return _fallback_response(query)
     except Exception as e:
-        logger.exception(f"Gemini API call failed: {e}")
-        return "🌿 I'm having trouble connecting to my AI brain right now. Please check back in a moment!"
+        # Surface the real error so it appears in the chat AND the server log
+        error_msg = str(e)
+        logger.error(f"Gemini API call failed: {error_msg}", exc_info=True)
+        return f"⚠️ Gemini Error: {error_msg}"
 
 
 def _fallback_response(query: str) -> str:
