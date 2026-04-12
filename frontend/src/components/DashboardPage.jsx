@@ -124,7 +124,7 @@ const DashboardPage = ({ onBack }) => {
       const newRow = { ...row };
       names.forEach(name => {
         if (!(name in newRow)) {
-          newRow[name] = null;
+          newRow[name] = 0;
         }
       });
       return newRow;
