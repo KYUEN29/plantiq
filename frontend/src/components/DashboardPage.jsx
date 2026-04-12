@@ -104,18 +104,18 @@ const DashboardPage = ({ onBack }) => {
         const earlyAvg = early.reduce((a, b) => a + b, 0) / early.length;
 
         if (recentAvg > earlyAvg + 10) {
-          generatedInsights.push({ type: 'success', icon: <TrendingUp className="w-5 h-5" />, text: `${name} health is improving 📈` });
+          generatedInsights.push({ type: 'success', icon: 'up', text: `${name} health is improving 📈` });
         } else if (recentAvg < earlyAvg - 10) {
-          generatedInsights.push({ type: 'warning', icon: <TrendingDown className="w-5 h-5" />, text: `${name} needs attention — health declining ⚠️` });
+          generatedInsights.push({ type: 'warning', icon: 'down', text: `${name} needs attention — health declining ⚠️` });
         } else {
-          generatedInsights.push({ type: 'neutral', icon: <Minus className="w-5 h-5" />, text: `${name} health is stable across ${s.scores.length} evaluations` });
+          generatedInsights.push({ type: 'neutral', icon: 'neutral', text: `${name} health is stable across ${s.scores.length} evaluations` });
         }
       }
 
       // Check watering consistency
       const dryCount = s.waterInputs.filter(w => w === 'Completely dry' || w === 'Slightly dry').length;
       if (dryCount >= 2) {
-        generatedInsights.push({ type: 'alert', icon: <AlertCircle className="w-5 h-5" />, text: `${name}: Watering pattern inconsistent — reported dry ${dryCount} times` });
+        generatedInsights.push({ type: 'alert', icon: 'alert', text: `${name}: Watering pattern inconsistent — reported dry ${dryCount} times` });
       }
     });
 
@@ -169,6 +169,15 @@ const DashboardPage = ({ onBack }) => {
     return { text: 'Plant health is stable across your collection 🌿', color: 'bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600' };
   }, [insights]);
 
+  const isValidChart =
+    Array.isArray(chartData) &&
+    chartData.length > 0 &&
+    Array.isArray(plantNames) &&
+    plantNames.length > 0 &&
+    chartData.every(row =>
+      plantNames.every(name => typeof row[name] === "number")
+    );
+
   return (
     <div className="w-full max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-20">
       <div className="flex items-center justify-between mb-4">
@@ -184,7 +193,7 @@ const DashboardPage = ({ onBack }) => {
         </button>
       </div>
 
-      {!chartData.length || plantNames.length === 0 ? (
+      {!Array.isArray(chartData) || chartData.length === 0 || !Array.isArray(plantNames) || plantNames.length === 0 ? (
         <div className="p-10 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 text-center shadow-sm">
           <Calendar className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
           <h3 className="text-2xl font-bold text-gray-900 dark:text-white">No history recorded yet</h3>
@@ -212,8 +221,9 @@ const DashboardPage = ({ onBack }) => {
               </div>
             </div>
             <div className="w-full h-96">
+              {isValidChart ? (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={Array.isArray(chartData) ? chartData : []} margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
+                <LineChart data={chartData} margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                   <XAxis 
                     dataKey="time" 
@@ -252,6 +262,9 @@ const DashboardPage = ({ onBack }) => {
                   ))}
                 </LineChart>
               </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-400 text-sm">Loading chart data...</div>
+              )}
             </div>
           </div>
 
@@ -269,7 +282,10 @@ const DashboardPage = ({ onBack }) => {
                   };
                   return (
                     <div key={i} className={`flex items-center gap-3 px-5 py-3 rounded-2xl border font-medium text-sm ${styles[insight.type] || styles.neutral}`}>
-                      {insight.icon}
+                      {insight.icon === 'up' && <TrendingUp className="w-5 h-5" />}
+                      {insight.icon === 'down' && <TrendingDown className="w-5 h-5" />}
+                      {insight.icon === 'neutral' && <Minus className="w-5 h-5" />}
+                      {insight.icon === 'alert' && <AlertCircle className="w-5 h-5" />}
                       <span>{insight.text}</span>
                     </div>
                   );
