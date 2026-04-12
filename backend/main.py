@@ -1,13 +1,20 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+import os
 import logging
 from dotenv import load_dotenv
-load_dotenv()  # Load GEMINI_API_KEY (and any other env vars) from .env at startup
+load_dotenv()
+
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from google import genai
+from google.genai import types
 
 from routes.predict import router as predict_router
-from routes.chat import router as chat_router
+from routes.chat import ChatRequest  # Import the existing model
 from routes.history import router as history_router
 from services.ml_service import ml_service
+
+# Client creation for the new google-genai SDK
+client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY'))
 
 # ── Logging setup ─────────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -28,8 +35,22 @@ app.add_middleware(
 )
 
 app.include_router(predict_router)
-app.include_router(chat_router)
+# chat_router inclusion removed to use the direct route below
 app.include_router(history_router)
+
+@app.post('/chat')
+def chat(request: ChatRequest):
+    try:
+        response = client.models.generate_content(
+            model='gemini-2.0-flash',
+            contents=request.message,
+            config=types.GenerateContentConfig(
+                system_instruction="You are Plantiq, an expert AI assistant for home plant care. Only answer questions about plants, gardening, watering, sunlight, and soil. Keep answers concise and friendly."
+            )
+        )
+        return {'reply': response.text}
+    except Exception as e:
+        return {'reply': f'Sorry, I could not process your request right now. (Error: {str(e)})'}
 
 @app.get("/", tags=["Health"])
 def root():

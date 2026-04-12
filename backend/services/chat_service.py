@@ -82,16 +82,12 @@ def process_query_with_llm(query: str, context: dict = None) -> str:
         return _fallback_response(query)
 
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
+        from google import genai
+        from google.genai import types
 
-        # SDK 0.8+ supports system_instruction in the constructor — clean and correct
-        model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
-            system_instruction=SYSTEM_PROMPT,
-        )
+        client = genai.Client(api_key=api_key)
 
-        # Build prompt from user plant context + query
+        # Build prompt: user plant context + query
         context_block = _build_context_block(context or {})
         full_prompt = (
             f"--- USER PLANT DATA ---\n{context_block}\n\n"
@@ -99,17 +95,16 @@ def process_query_with_llm(query: str, context: dict = None) -> str:
         )
 
         logger.info(f"Sending prompt to Gemini (length={len(full_prompt)} chars)")
-        response = model.generate_content(full_prompt)
 
-        # Safe text extraction — response.text raises if content was blocked
-        try:
-            reply = response.text.strip()
-        except Exception:
-            # Try manual extraction from candidates
-            try:
-                reply = response.candidates[0].content.parts[0].text.strip()
-            except Exception:
-                reply = ""
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=full_prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT,
+            ),
+        )
+
+        reply = (response.text or "").strip()
 
         if not reply:
             logger.warning("Gemini returned an empty response (possibly safety-filtered).")
@@ -119,10 +114,9 @@ def process_query_with_llm(query: str, context: dict = None) -> str:
         return reply
 
     except ImportError:
-        logger.error("google-generativeai not installed. Run: pip install google-generativeai")
+        logger.error("google-genai not installed. Run: pip install google-genai")
         return _fallback_response(query)
     except Exception as e:
-        # Surface the real error so it appears in the chat AND the server log
         error_msg = str(e)
         logger.error(f"Gemini API call failed: {error_msg}", exc_info=True)
         return f"⚠️ Gemini Error: {error_msg}"
