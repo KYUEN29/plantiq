@@ -27,7 +27,7 @@ const DashboardPage = ({ onBack }) => {
     const fetchHistory = async () => {
       try {
         const data = await getHistoryDashboard();
-        setRawHistory(data);
+        setRawHistory(Array.isArray(data) ? data : []);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -40,7 +40,7 @@ const DashboardPage = ({ onBack }) => {
   // Transform history into pivoted multi-plant time-series: 
   // [{ time: "Apr 12, 10:30", "Money Plant": 100, "Snake Plant": 60, ... }]
   const { chartData, plantNames, plantStats, insights } = useMemo(() => {
-    if (!rawHistory || rawHistory.length === 0) {
+    if (!Array.isArray(rawHistory) || rawHistory.length === 0) {
       return { chartData: [], plantNames: [], plantStats: {}, insights: [] };
     }
 
@@ -48,26 +48,40 @@ const DashboardPage = ({ onBack }) => {
     const stats = {}; // { plantName: { scores: [], waterInputs: [] } }
 
     rawHistory.forEach((entry, idx) => {
+      if (!entry || typeof entry !== "object") return;
+
       const timeLabel = entry.timestamp 
         ? new Date(entry.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' }) 
         : `Session ${idx + 1}`;
 
       const row = { time: timeLabel };
 
-      if (!entry.predictions || !Array.isArray(entry.predictions)) return;
+      if (!Array.isArray(entry.predictions)) return;
 
       entry.predictions.forEach((pred, pIdx) => {
-        const healthText = pred.health || "";
-        const score = healthText.includes("Healthy") ? 100 : (healthText.includes("attention") ? 60 : 30);
-        row[pred.plant] = score;
+        if (!pred || typeof pred !== "object") return;
 
-        if (!stats[pred.plant]) stats[pred.plant] = { scores: [], waterInputs: [] };
-        stats[pred.plant].scores.push(score);
+        const plantName = pred.plant || "Unknown";
+        const healthText = typeof pred.health === "string" ? pred.health : "";
 
-        // Track water inputs for pattern analysis
+        const score = healthText.includes("Healthy")
+          ? 100
+          : healthText.includes("attention")
+          ? 60
+          : 30;
+
+        row[plantName] = score;
+
+        if (!stats[plantName]) {
+          stats[plantName] = { scores: [], waterInputs: [] };
+        }
+
+        stats[plantName].scores.push(score);
+
         const plantInput = Array.isArray(entry.plants) ? entry.plants[pIdx] : null;
-        if (plantInput?.water) {
-          stats[pred.plant].waterInputs.push(plantInput.water);
+
+        if (plantInput && typeof plantInput.water === "string") {
+          stats[plantName].waterInputs.push(plantInput.water);
         }
       });
 
