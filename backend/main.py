@@ -42,7 +42,7 @@ app.include_router(history_router)
 def chat(request: ChatRequest):
     try:
         response = client.models.generate_content(
-            model='gemini-2.0-flash',
+            model='gemini-2.5-flash',
             contents=request.message,
             config=types.GenerateContentConfig(
                 system_instruction="You are Plantiq, an expert AI assistant for home plant care. Only answer questions about plants, gardening, watering, sunlight, and soil. Keep answers concise and friendly."
