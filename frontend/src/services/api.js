@@ -43,7 +43,7 @@ export const askChatAssistant = async (queryString, context = {}) => {
     const response = await fetch(`${BASE_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: queryString, context })
+        body: JSON.stringify({ message: queryString, context })
     });
     if (!response.ok) {
         throw new Error("Chatbot endpoint is currently offline.");
