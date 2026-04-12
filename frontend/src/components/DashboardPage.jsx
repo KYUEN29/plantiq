@@ -85,10 +85,12 @@ const DashboardPage = ({ onBack }) => {
         }
       });
 
-      pivoted.push(row);
+      if (Object.keys(row).length > 1) {
+        pivoted.push(row);
+      }
     });
 
-    const names = Object.keys(stats);
+    const names = Object.keys(stats || {});
 
     // Generate insights
     const generatedInsights = [];
@@ -171,7 +173,7 @@ const DashboardPage = ({ onBack }) => {
         </button>
       </div>
 
-      {chartData.length === 0 ? (
+      {!chartData.length || plantNames.length === 0 ? (
         <div className="p-10 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 text-center shadow-sm">
           <Calendar className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
           <h3 className="text-2xl font-bold text-gray-900 dark:text-white">No history recorded yet</h3>
@@ -225,7 +227,7 @@ const DashboardPage = ({ onBack }) => {
                     wrapperStyle={{ paddingTop: '20px' }}
                     formatter={(value) => <span style={{ color: '#6b7280', fontWeight: 600, fontSize: '13px' }}>{value}</span>}
                   />
-                  {plantNames.map(name => (
+                  {Array.isArray(plantNames) && plantNames.map(name => (
                     <Line 
                       key={name}
                       type="monotone" 
