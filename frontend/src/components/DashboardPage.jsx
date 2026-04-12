@@ -134,6 +134,30 @@ const DashboardPage = ({ onBack }) => {
     return { chartData: normalizedData, plantNames: names, plantStats: stats, insights: generatedInsights };
   }, [rawHistory]);
 
+  // Compute overall trend summary — MUST be before any early returns (Rules of Hooks)
+  const trendSummary = useMemo(() => {
+    const improving = insights.filter(i => i.type === 'success').length;
+    const declining = insights.filter(i => i.type === 'warning').length;
+    const alerts = insights.filter(i => i.type === 'alert').length;
+
+    if (improving > 0 && declining === 0 && alerts === 0) {
+      return { text: 'Your plants are doing great! Keep it up 📈', color: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800/30' };
+    } else if (declining > 0 || alerts > 0) {
+      return { text: `${declining} plant${declining !== 1 ? 's' : ''} need${declining === 1 ? 's' : ''} attention ⚠️`, color: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800/30' };
+    }
+    return { text: 'Plant health is stable across your collection 🌿', color: 'bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600' };
+  }, [insights]);
+
+  // Validate chart data — MUST be before any early returns (Rules of Hooks)
+  const isValidChart =
+    Array.isArray(chartData) &&
+    chartData.length > 0 &&
+    Array.isArray(plantNames) &&
+    plantNames.length > 0 &&
+    chartData.every(row =>
+      plantNames.every(name => typeof row[name] === "number")
+    );
+
   if (loading) {
     return (
       <div className="py-32 flex flex-col items-center justify-center space-y-6">
@@ -157,28 +181,6 @@ const DashboardPage = ({ onBack }) => {
   }
 
   // Compute overall trend summary
-  const trendSummary = useMemo(() => {
-    const improving = insights.filter(i => i.type === 'success').length;
-    const declining = insights.filter(i => i.type === 'warning').length;
-    const alerts = insights.filter(i => i.type === 'alert').length;
-
-    if (improving > 0 && declining === 0 && alerts === 0) {
-      return { text: 'Your plants are doing great! Keep it up 📈', color: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800/30' };
-    } else if (declining > 0 || alerts > 0) {
-      return { text: `${declining} plant${declining !== 1 ? 's' : ''} need${declining === 1 ? 's' : ''} attention ⚠️`, color: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800/30' };
-    }
-    return { text: 'Plant health is stable across your collection 🌿', color: 'bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600' };
-  }, [insights]);
-
-  const isValidChart =
-    Array.isArray(chartData) &&
-    chartData.length > 0 &&
-    Array.isArray(plantNames) &&
-    plantNames.length > 0 &&
-    chartData.every(row =>
-      plantNames.every(name => typeof row[name] === "number")
-    );
-
   return (
     <div className="w-full max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-20">
       <div className="flex items-center justify-between mb-4">
