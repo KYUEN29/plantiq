@@ -82,6 +82,14 @@ const ResultsDashboard = ({ payload, onRestart, onResultsLoaded }) => {
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+      {/* Completion Feedback Banner */}
+      <div className="flex items-center gap-3 px-5 py-3 bg-green-50 dark:bg-green-900/20 rounded-2xl border border-green-200/50 dark:border-green-800/30">
+        <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+        <span className="text-green-800 dark:text-green-300 font-medium text-sm">
+          Analysis complete! {results.length} plant{results.length !== 1 ? 's' : ''} evaluated with AI-powered recommendations.
+        </span>
+      </div>
+
       <div className="flex items-center justify-between mb-8">
         <div>
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
@@ -90,7 +98,7 @@ const ResultsDashboard = ({ payload, onRestart, onResultsLoaded }) => {
           </h2>
           <p className="text-gray-500 mt-2 text-lg">Personalized actionable recommendations.</p>
         </div>
-        <button onClick={onRestart} className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors shadow-sm font-semibold text-gray-700 dark:text-gray-200">
+        <button onClick={onRestart} className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 transition-colors shadow-sm font-semibold text-gray-700 dark:text-gray-200 active:scale-95">
           <RefreshCcw className="w-4 h-4" /> Start Over
         </button>
       </div>
