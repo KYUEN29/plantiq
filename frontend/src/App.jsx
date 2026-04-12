@@ -7,7 +7,7 @@ import ResultsDashboard from './components/ResultsDashboard';
 import DashboardPage from './components/DashboardPage';
 import ChatWidget from './components/ChatWidget';
 import AiPanel from './components/AiPanel';
-import { Moon, Sun, ArrowRight, Activity, Leaf, Grid3X3 } from 'lucide-react';
+import { Moon, Sun, ArrowRight, Activity, Leaf, Grid3X3, Bot } from 'lucide-react';
 
 function App() {
   const [darkMode, setDarkMode] = useState(false);
