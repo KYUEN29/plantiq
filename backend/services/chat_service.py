@@ -85,8 +85,8 @@ def process_query_with_llm(query: str, context: dict = None) -> str:
         import google.generativeai as genai
         genai.configure(api_key=api_key)
 
-        # Use gemini-pro — stable and available on current v1beta API
-        model = genai.GenerativeModel(model_name="gemini-pro")
+        # gemini-1.5-flash: current stable free-tier model (gemini-pro is deprecated)
+        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
 
         # Prepend system prompt directly (compatible with all SDK versions)
         context_block = _build_context_block(context or {})
