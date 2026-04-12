@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 class ChatRequest(BaseModel):
-    query: str
+    message: str
     context: Optional[Any] = None
 
 class ChatResponse(BaseModel):
@@ -28,7 +28,7 @@ def chat(payload: ChatRequest):
         if not context:
             context = {"history": history_service.get_all()}
 
-        reply_string = chat_service.process_query(payload.query, context)
+        reply_string = chat_service.process_query(payload.message, context)
         return ChatResponse(reply=reply_string)
     except Exception as e:
         logger.exception("Failed to process chat query.")
