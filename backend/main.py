@@ -43,3 +43,5 @@ def health_check():
     if not ml_service.is_loaded():
         raise HTTPException(status_code=503, detail="Models not loaded")
     return {"status": "ok"}
+
+# updated: gemini-sdk-fix — forces Render to reinstall with google-generativeai>=0.8.0

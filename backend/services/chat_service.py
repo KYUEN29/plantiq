@@ -85,13 +85,15 @@ def process_query_with_llm(query: str, context: dict = None) -> str:
         import google.generativeai as genai
         genai.configure(api_key=api_key)
 
-        # gemini-1.5-flash: current stable free-tier model (gemini-pro is deprecated)
-        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+        # SDK 0.8+ supports system_instruction in the constructor — clean and correct
+        model = genai.GenerativeModel(
+            model_name="gemini-1.5-flash",
+            system_instruction=SYSTEM_PROMPT,
+        )
 
-        # Prepend system prompt directly (compatible with all SDK versions)
+        # Build prompt from user plant context + query
         context_block = _build_context_block(context or {})
         full_prompt = (
-            f"{SYSTEM_PROMPT}\n\n"
             f"--- USER PLANT DATA ---\n{context_block}\n\n"
             f"User: {query}"
         )
