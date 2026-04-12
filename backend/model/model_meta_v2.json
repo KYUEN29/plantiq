@@ -1,0 +1,1 @@
+{"features": ["moisture", "temperature", "humidity", "light", "sunlight_hours", "time_since_last_water", "watering_frequency", "plant_type", "soil_type", "pot_size", "growth_stage"], "metrics": {"clf_accuracy": 0.9985, "reg_r2": 0.886769558235856}}
