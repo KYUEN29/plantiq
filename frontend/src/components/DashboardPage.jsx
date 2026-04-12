@@ -18,6 +18,11 @@ const PLANT_COLORS = {
   'Jade Plant':  '#84cc16',
 };
 
+// FIX 3: safeNum sanitises any value before it reaches Recharts or the UI
+// Prevents NaN/undefined from crashing the chart commit phase
+const safeNum = (val, fallback = 0) =>
+  typeof val === 'number' && !isNaN(val) ? val : fallback;
+
 const DashboardPage = ({ onBack }) => {
   const [rawHistory, setRawHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,51 +42,65 @@ const DashboardPage = ({ onBack }) => {
     fetchHistory();
   }, []);
 
-  // Transform history into pivoted multi-plant time-series: 
+  // Transform history into pivoted multi-plant time-series:
   // [{ time: "Apr 12, 10:30", "Money Plant": 100, "Snake Plant": 60, ... }]
-  // CRITICAL: This block must remain PURE. No setState or side effects allowed here (Prevents Error #310).
+  // PURE — no setState, no side effects (prevents Error #310)
   const { chartData, plantNames, plantStats, insights } = useMemo(() => {
+    // FIX 1 + FIX 4: guard the top-level dependency before any property access
     if (!Array.isArray(rawHistory) || rawHistory.length === 0) {
       return { chartData: [], plantNames: [], plantStats: {}, insights: [] };
     }
 
     const pivoted = [];
-    const stats = {}; // { plantName: { scores: [], waterInputs: [] } }
+    const stats = {};
 
     rawHistory.forEach((entry, idx) => {
-      if (!entry || typeof entry !== "object") return;
+      // FIX 1: guard every entry before accessing its properties
+      if (!entry || typeof entry !== 'object') return;
 
-      const timeLabel = entry.timestamp 
-        ? new Date(entry.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' }) 
-        : `Session ${idx + 1}`;
+      let timeLabel;
+      try {
+        timeLabel = entry.timestamp
+          ? new Date(entry.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+          : `Session ${idx + 1}`;
+      } catch {
+        timeLabel = `Session ${idx + 1}`;
+      }
 
       const row = { time: timeLabel };
 
-      if (!Array.isArray(entry.predictions)) return;
+      // FIX 4: guard predictions array before iterating
+      if (!Array.isArray(entry.predictions) || entry.predictions.length === 0) return;
 
       entry.predictions.forEach((pred, pIdx) => {
-        if (!pred || typeof pred !== "object") return;
+        // FIX 1: guard every prediction object
+        if (!pred || typeof pred !== 'object') return;
 
-        const plantName = pred.plant || "Unknown";
-        const healthText = typeof pred.health === "string" ? pred.health : "";
+        const plantName = typeof pred.plant === 'string' && pred.plant.trim()
+          ? pred.plant.trim()
+          : 'Unknown';
+        const healthText = typeof pred.health === 'string' ? pred.health : '';
 
-        const score = healthText.includes("Healthy")
+        // FIX 3: all scores go through safeNum — no NaN ever reaches the chart
+        const rawScore = healthText.includes('Healthy')
           ? 100
-          : healthText.includes("attention")
+          : healthText.includes('attention')
           ? 60
           : 30;
+        const score = safeNum(rawScore, 0);
 
         row[plantName] = score;
 
         if (!stats[plantName]) {
           stats[plantName] = { scores: [], waterInputs: [] };
         }
-
         stats[plantName].scores.push(score);
 
-        const plantInput = Array.isArray(entry.plants) ? entry.plants[pIdx] : null;
-
-        if (plantInput && typeof plantInput.water === "string") {
+        // FIX 1 + FIX 4: guard plants array before index access
+        const plantInput = Array.isArray(entry.plants) && pIdx < entry.plants.length
+          ? entry.plants[pIdx]
+          : null;
+        if (plantInput && typeof plantInput.water === 'string') {
           stats[plantName].waterInputs.push(plantInput.water);
         }
       });
@@ -91,54 +110,61 @@ const DashboardPage = ({ onBack }) => {
       }
     });
 
-    const names = Object.keys(stats || {});
+    // FIX 4: guard stats object before key extraction
+    const names = stats && typeof stats === 'object' ? Object.keys(stats) : [];
 
-    // Generate insights
+    // Generate insights — all array ops guarded
     const generatedInsights = [];
 
     names.forEach(name => {
       const s = stats[name];
-      if (s.scores.length >= 2) {
-        const recent = s.scores.slice(-2);
-        const early = s.scores.slice(0, 2);
-        const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
-        const earlyAvg = early.reduce((a, b) => a + b, 0) / early.length;
+      // FIX 1 + FIX 4: guard scores array before reduce/slice
+      if (!s || !Array.isArray(s.scores) || s.scores.length < 2) return;
 
-        if (recentAvg > earlyAvg + 10) {
-          generatedInsights.push({ type: 'success', icon: 'up', text: `${name} health is improving 📈` });
-        } else if (recentAvg < earlyAvg - 10) {
-          generatedInsights.push({ type: 'warning', icon: 'down', text: `${name} needs attention — health declining ⚠️` });
-        } else {
-          generatedInsights.push({ type: 'neutral', icon: 'neutral', text: `${name} health is stable across ${s.scores.length} evaluations` });
-        }
+      const recent = s.scores.slice(-2);
+      const early = s.scores.slice(0, 2);
+      // FIX 3: safeNum guards against NaN from reduce on bad arrays
+      const recentAvg = safeNum(recent.reduce((a, b) => safeNum(a) + safeNum(b), 0) / recent.length);
+      const earlyAvg  = safeNum(early.reduce((a, b)  => safeNum(a) + safeNum(b), 0) / early.length);
+
+      if (recentAvg > earlyAvg + 10) {
+        generatedInsights.push({ type: 'success', icon: 'up', text: `${name} health is improving 📈` });
+      } else if (recentAvg < earlyAvg - 10) {
+        generatedInsights.push({ type: 'warning', icon: 'down', text: `${name} needs attention — health declining ⚠️` });
+      } else {
+        generatedInsights.push({ type: 'neutral', icon: 'neutral', text: `${name} health is stable across ${s.scores.length} evaluations` });
       }
 
-      // Check watering consistency
-      const dryCount = s.waterInputs.filter(w => w === 'Completely dry' || w === 'Slightly dry').length;
+      // FIX 4: guard waterInputs before filter
+      const waterInputs = Array.isArray(s.waterInputs) ? s.waterInputs : [];
+      const dryCount = waterInputs.filter(w => w === 'Completely dry' || w === 'Slightly dry').length;
       if (dryCount >= 2) {
         generatedInsights.push({ type: 'alert', icon: 'alert', text: `${name}: Watering pattern inconsistent — reported dry ${dryCount} times` });
       }
     });
 
-    // Normalize: ensure every row has a key for every plant (null if missing)
-    const normalizedData = pivoted.map(row => {
+    // Normalize: every row gets a numeric key for every plant
+    // FIX 3: all values guaranteed numeric via safeNum — no NaN into Recharts
+    const normalizedData = Array.isArray(pivoted) ? pivoted.map(row => {
       const newRow = { ...row };
       names.forEach(name => {
-        if (!(name in newRow)) {
-          newRow[name] = 0;
-        }
+        newRow[name] = safeNum(name in newRow ? newRow[name] : 0, 0);
       });
       return newRow;
-    });
+    }) : [];
 
     return { chartData: normalizedData, plantNames: names, plantStats: stats, insights: generatedInsights };
   }, [rawHistory]);
 
   // Compute overall trend summary — MUST be before any early returns (Rules of Hooks)
   const trendSummary = useMemo(() => {
-    const improving = insights.filter(i => i.type === 'success').length;
-    const declining = insights.filter(i => i.type === 'warning').length;
-    const alerts = insights.filter(i => i.type === 'alert').length;
+    // FIX 1 + FIX 4: guard insights array before filter
+    if (!Array.isArray(insights)) {
+      return { text: 'Plant health is stable across your collection 🌿', color: 'bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600' };
+    }
+    const improving = insights.filter(i => i && i.type === 'success').length;
+    const declining = insights.filter(i => i && i.type === 'warning').length;
+    const alerts = insights.filter(i => i && i.type === 'alert').length;
 
     if (improving > 0 && declining === 0 && alerts === 0) {
       return { text: 'Your plants are doing great! Keep it up 📈', color: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800/30' };
@@ -149,14 +175,15 @@ const DashboardPage = ({ onBack }) => {
   }, [insights]);
 
   // Validate chart data — MUST be before any early returns (Rules of Hooks)
-  const isValidChart =
-    Array.isArray(chartData) &&
-    chartData.length > 0 &&
-    Array.isArray(plantNames) &&
-    plantNames.length > 0 &&
-    chartData.every(row =>
-      plantNames.every(name => typeof row[name] === "number")
+  // FIX 1 + FIX 3: every row must have only numeric (non-NaN) values for all plants
+  const isValidChart = useMemo(() => {
+    if (!Array.isArray(chartData) || chartData.length === 0) return false;
+    if (!Array.isArray(plantNames) || plantNames.length === 0) return false;
+    return chartData.every(row =>
+      row && typeof row === 'object' &&
+      plantNames.every(name => typeof row[name] === 'number' && !isNaN(row[name]))
     );
+  }, [chartData, plantNames]);
 
   if (loading) {
     return (
@@ -180,7 +207,6 @@ const DashboardPage = ({ onBack }) => {
     );
   }
 
-  // Compute overall trend summary
   return (
     <div className="w-full max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-20">
       <div className="flex items-center justify-between mb-4">
@@ -245,13 +271,13 @@ const DashboardPage = ({ onBack }) => {
                   <Tooltip 
                     contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.15)', padding: '14px 18px' }}
                     labelStyle={{ color: '#374151', fontWeight: 'bold', marginBottom: '0.5rem', fontSize: '14px' }}
-                    formatter={(value, name) => [`${value}/100`, name]}
+                    formatter={(value, name) => [`${safeNum(value)}/100`, name]}
                   />
                   <Legend 
                     wrapperStyle={{ paddingTop: '20px' }}
                     formatter={(value) => <span style={{ color: '#6b7280', fontWeight: 600, fontSize: '13px' }}>{value}</span>}
                   />
-                  {Array.isArray(plantNames) && plantNames.map(name => (
+                  {plantNames.map(name => (
                     <Line 
                       key={name}
                       type="monotone" 
@@ -272,7 +298,7 @@ const DashboardPage = ({ onBack }) => {
           </div>
 
           {/* AI Insights Panel */}
-          {insights.length > 0 && (
+          {Array.isArray(insights) && insights.length > 0 && (
             <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-md">
               <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">AI Insights</h3>
               <div className="space-y-3">
@@ -283,6 +309,7 @@ const DashboardPage = ({ onBack }) => {
                     alert:   'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800/30',
                     neutral: 'bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600',
                   };
+                  if (!insight) return null;
                   return (
                     <div key={i} className={`flex items-center gap-3 px-5 py-3 rounded-2xl border font-medium text-sm ${styles[insight.type] || styles.neutral}`}>
                       {insight.icon === 'up' && <TrendingUp className="w-5 h-5" />}
@@ -299,13 +326,17 @@ const DashboardPage = ({ onBack }) => {
 
           {/* Per-Plant Stats Grid */}
           {(() => {
-            const plants = Object.entries(plantStats);
+            // FIX 4: guard plantStats before Object.entries
+            const safeStats = plantStats && typeof plantStats === 'object' ? plantStats : {};
+            const plants = Object.entries(safeStats);
             if (plants.length === 0) return null;
             return (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                 {plants.map(([name, info]) => {
-                  const avg = info.scores.length
-                    ? Math.round(info.scores.reduce((a,b) => a+b, 0) / info.scores.length)
+                  // FIX 1 + FIX 3: guard info and scores before reduce
+                  const scores = Array.isArray(info?.scores) ? info.scores : [];
+                  const avg = scores.length
+                    ? safeNum(Math.round(scores.reduce((a, b) => safeNum(a) + safeNum(b), 0) / scores.length), 0)
                     : 0;
                   const color = avg >= 80 ? 'text-green-500' : avg >= 50 ? 'text-yellow-500' : 'text-red-500';
                   const bg = avg >= 80 ? 'bg-green-50 dark:bg-green-900/20' : avg >= 50 ? 'bg-yellow-50 dark:bg-yellow-900/20' : 'bg-red-50 dark:bg-red-900/20';
@@ -317,7 +348,7 @@ const DashboardPage = ({ onBack }) => {
                         <div className="text-sm font-bold text-gray-900 dark:text-white">{name}</div>
                       </div>
                       <div className={`text-3xl font-black ${color}`}>{avg}</div>
-                      <div className="text-xs text-gray-400 mt-0.5">{info.scores.length} eval{info.scores.length > 1 ? 's' : ''}</div>
+                      <div className="text-xs text-gray-400 mt-0.5">{scores.length} eval{scores.length > 1 ? 's' : ''}</div>
                     </div>
                   );
                 })}
@@ -339,12 +370,13 @@ const DashboardPage = ({ onBack }) => {
               <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Assessment History</h3>
               <p className="text-gray-500 text-sm mb-4">Total sessions tracked: <span className="font-bold text-gray-900 dark:text-white">{rawHistory.length}</span></p>
               <div className="space-y-2">
-                {rawHistory.slice(-5).reverse().map((entry, i) => (
+                {/* FIX 4: guard rawHistory before slice/reverse/map */}
+                {Array.isArray(rawHistory) && rawHistory.slice(-5).reverse().map((entry, i) => (
                   <div key={i} className="flex items-center justify-between text-sm px-4 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
                     <span className="text-gray-500 dark:text-gray-400">
-                      {entry.timestamp ? new Date(entry.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' }) : `Session ${rawHistory.length - i}`}
+                      {entry?.timestamp ? new Date(entry.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' }) : `Session ${rawHistory.length - i}`}
                     </span>
-                    <span className="font-bold text-gray-900 dark:text-white">{entry.predictions?.length || 0} plants</span>
+                    <span className="font-bold text-gray-900 dark:text-white">{entry?.predictions?.length || 0} plants</span>
                   </div>
                 ))}
               </div>
@@ -357,4 +389,3 @@ const DashboardPage = ({ onBack }) => {
 };
 
 export default DashboardPage;
-

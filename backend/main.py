@@ -1,6 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import logging
+from dotenv import load_dotenv
+load_dotenv()  # Load GEMINI_API_KEY (and any other env vars) from .env at startup
 
 from routes.predict import router as predict_router
 from routes.chat import router as chat_router
