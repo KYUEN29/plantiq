@@ -11,9 +11,18 @@ const QUICK_SUGGESTIONS = [
 
 const ChatWidget = ({ latestResults }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([
-    { id: 1, text: "Hey there! 🌿 I'm your Plantiq assistant. Ask me about your plants, past assessments, or any care tips you need!", sender: 'ai' }
-  ]);
+  const [messages, setMessages] = useState([]);
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  // 1. SAFE INITIALIZATION (Prevents Error #310)
+  useEffect(() => {
+    if (!hasInitialized) {
+      setMessages([
+        { id: 1, text: "Hey there! 🌿 I'm your Plantiq assistant. Ask me about your plants, past assessments, or any care tips you need!", sender: 'ai' }
+      ]);
+      setHasInitialized(true);
+    }
+  }, [hasInitialized]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true);

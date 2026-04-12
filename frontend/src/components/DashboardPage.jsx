@@ -39,6 +39,7 @@ const DashboardPage = ({ onBack }) => {
 
   // Transform history into pivoted multi-plant time-series: 
   // [{ time: "Apr 12, 10:30", "Money Plant": 100, "Snake Plant": 60, ... }]
+  // CRITICAL: This block must remain PURE. No setState or side effects allowed here (Prevents Error #310).
   const { chartData, plantNames, plantStats, insights } = useMemo(() => {
     if (!Array.isArray(rawHistory) || rawHistory.length === 0) {
       return { chartData: [], plantNames: [], plantStats: {}, insights: [] };

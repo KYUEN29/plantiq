@@ -6,6 +6,7 @@ import WizardFlow from './components/WizardFlow';
 import ResultsDashboard from './components/ResultsDashboard';
 import DashboardPage from './components/DashboardPage';
 import ChatWidget from './components/ChatWidget';
+import AiPanel from './components/AiPanel';
 import { Moon, Sun, ArrowRight, Activity, Leaf, Grid3X3 } from 'lucide-react';
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
   const [payload, setPayload] = useState(null);
   const [latestResults, setLatestResults] = useState(null);
   const [activeFilter, setActiveFilter] = useState('All Plants');
+  const [isAiPanelOpen, setIsAiPanelOpen] = useState(false);
   
   const gridRef = useRef(null);
 
@@ -100,6 +102,13 @@ function App() {
             >
               {darkMode ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-gray-500" />}
             </button>
+            <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1"></div>
+            <button 
+              onClick={() => setIsAiPanelOpen(true)}
+              className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl text-xs font-bold transition-all hover:scale-105 active:scale-95 flex items-center gap-2 shadow-md shadow-indigo-500/20"
+            >
+              <Bot className="w-4 h-4" /> AI Panel
+            </button>
           </div>
         </div>
       </nav>
@@ -171,6 +180,11 @@ function App() {
 
       {/* Independent Floating Components */}
       <ChatWidget latestResults={latestResults} />
+      <AiPanel 
+        isOpen={isAiPanelOpen} 
+        onClose={() => setIsAiPanelOpen(false)} 
+        latestResults={latestResults} 
+      />
     </div>
   );
 }
