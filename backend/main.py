@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 from routes.predict import router as predict_router
+from routes.chat import router as chat_router
+from routes.history import router as history_router
 from services.ml_service import ml_service
 
 # ── Logging setup ─────────────────────────────────────────────────────────────
@@ -24,6 +26,8 @@ app.add_middleware(
 )
 
 app.include_router(predict_router)
+app.include_router(chat_router)
+app.include_router(history_router)
 
 @app.get("/", tags=["Health"])
 def root():

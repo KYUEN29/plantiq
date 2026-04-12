@@ -1,8 +1,9 @@
 // Simple in-memory cache mapped to stringified payloads
 const predictionCache = new Map();
 
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 export const predictPlantHealth = async (payload) => {
-  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
   const cacheKey = JSON.stringify(payload);
 
   if (predictionCache.has(cacheKey)) {
@@ -13,7 +14,7 @@ export const predictPlantHealth = async (payload) => {
   const response = await fetch(`${BASE_URL}/predict`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ plants: payload }) // Wrapping in the expected batch object
+    body: JSON.stringify({ plants: payload })
   });
 
   if (!response.ok) {
@@ -21,14 +22,32 @@ export const predictPlantHealth = async (payload) => {
     try {
       const data = await response.json();
       if (data.detail) errorMsg = data.detail;
-    } catch (e) {
-      // JSON parse failed, stick to generic message
-    }
+    } catch (e) { }
     throw new Error(errorMsg);
   }
 
   const data = await response.json();
   predictionCache.set(cacheKey, data.results);
-  
   return data.results;
 };
+
+export const getHistoryDashboard = async () => {
+    const response = await fetch(`${BASE_URL}/history`);
+    if (!response.ok) {
+        throw new Error("Unable to parse historical datasets.");
+    }
+    return await response.json();
+}
+
+export const askChatAssistant = async (queryString, context = {}) => {
+    const response = await fetch(`${BASE_URL}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: queryString, context })
+    });
+    if (!response.ok) {
+        throw new Error("Chatbot endpoint is currently offline.");
+    }
+    const data = await response.json();
+    return data.reply;
+}

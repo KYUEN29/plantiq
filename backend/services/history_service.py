@@ -61,4 +61,15 @@ class HistoryService:
             
         return recs
 
+    @staticmethod
+    def get_all():
+        if not HISTORY_FILE.exists():
+            return []
+            
+        try:
+            with open(HISTORY_FILE, "r") as f:
+                return json.load(f)
+        except Exception:
+            return []
+
 history_service = HistoryService()

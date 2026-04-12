@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Cpu, Droplets, Sun, Sprout, AlertTriangle, CheckCircle2, RefreshCcw, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { predictPlantHealth } from '../services/api';
 
-const ResultsDashboard = ({ payload, onRestart }) => {
+const ResultsDashboard = ({ payload, onRestart, onResultsLoaded }) => {
   const [loading, setLoading] = useState(true);
   const [results, setResults] = useState([]);
   const [error, setError] = useState(null);
@@ -14,6 +14,8 @@ const ResultsDashboard = ({ payload, onRestart }) => {
       try {
         const resultsData = await predictPlantHealth(payload);
         setResults(resultsData);
+        // Notify parent so ChatWidget can use this session's results
+        if (onResultsLoaded) onResultsLoaded(resultsData);
       } catch (err) {
         setError(err.message);
       } finally {
