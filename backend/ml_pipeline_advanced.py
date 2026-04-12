@@ -16,7 +16,7 @@ np.random.seed(42)
 random.seed(42)
 
 # --- 1. CONFIG & RANGES ---
-PLANTS = ['Cactus', 'Snake Plant', 'Money Plant', 'Peace Lily', 'Fern']
+PLANTS = ['Money Plant', 'Snake Plant', 'Tulsi', 'Aloe Vera', 'Monstera', 'Peace Lily', 'Spider Plant', 'Areca Palm', 'Fern', 'Jade Plant']
 SOILS = ['sandy', 'clay', 'loamy']
 POT_SIZES = ['small', 'medium', 'large']
 STAGES = ['seedling', 'young', 'mature']
@@ -37,27 +37,23 @@ def generate_dataset(num_samples=10000):
         humidity = round(random.uniform(25, 95), 1)
         
         # Plant-specific Constraints
-        if plant == 'Cactus':
+        if plant in ['Aloe Vera', 'Jade Plant']:
             base_moisture = random.uniform(5, 35)
             freq = 1
             sunlight = random.uniform(6, 10)
-        elif plant == 'Snake Plant':
+        elif plant in ['Snake Plant', 'Spider Plant']:
             base_moisture = random.uniform(15, 55)
             freq = random.randint(1, 2)
-            sunlight = random.uniform(4, 8)
-        elif plant == 'Money Plant':
+            sunlight = random.uniform(4, 9)
+        elif plant in ['Money Plant', 'Tulsi', 'Areca Palm']:
             base_moisture = random.uniform(35, 75)
-            freq = random.randint(2, 3)
-            sunlight = random.uniform(4, 6)
-        elif plant == 'Peace Lily':
+            freq = random.randint(2, 4)
+            sunlight = random.uniform(4, 7)
+        else: # Peace Lily, Monstera, Fern
             base_moisture = random.uniform(45, 85)
             freq = random.randint(3, 5)
-            sunlight = random.uniform(2, 5)
-        else: # Fern
-            base_moisture = random.uniform(55, 95)
-            freq = random.randint(3, 5)
-            humidity = max(humidity, random.uniform(70, 95)) # Enforce high humidity
-            sunlight = random.uniform(2, 5)
+            humidity = max(humidity, random.uniform(60, 95)) # Enforce high humidity
+            sunlight = random.uniform(2, 6)
 
         # Light Mapping
         if sunlight < 4:
@@ -84,10 +80,10 @@ def generate_dataset(num_samples=10000):
         # Target 1: Water Needed
         # If moisture drops below plant threshold OR Temp is high + moisture moderate
         water_needed = 0
-        if plant == 'Cactus' and current_moisture < 10: water_needed = 1
-        elif plant == 'Snake Plant' and current_moisture < 20: water_needed = 1
-        elif plant == 'Money Plant' and current_moisture < 40: water_needed = 1
-        elif plant in ['Peace Lily', 'Fern'] and current_moisture < 55: water_needed = 1
+        if plant in ['Aloe Vera', 'Jade Plant'] and current_moisture < 10: water_needed = 1
+        elif plant in ['Snake Plant', 'Spider Plant'] and current_moisture < 20: water_needed = 1
+        elif plant in ['Money Plant', 'Tulsi', 'Areca Palm'] and current_moisture < 40: water_needed = 1
+        elif plant in ['Peace Lily', 'Monstera', 'Fern'] and current_moisture < 55: water_needed = 1
         # Environmental trigger
         if current_moisture < 45 and temp > 33: water_needed = 1
         # Overwater protection
@@ -97,8 +93,8 @@ def generate_dataset(num_samples=10000):
         health = 100.0
         if water_needed == 1 and time_since > 48: health -= 15
         if temp < 18 or temp > 35: health -= 10
-        if plant == 'Fern' and humidity < 50: health -= 20
-        if plant == 'Cactus' and humidity > 70: health -= 15
+        if plant in ['Fern', 'Monstera'] and humidity < 50: health -= 20
+        if plant in ['Aloe Vera', 'Jade Plant'] and humidity > 70: health -= 15
         if stage == 'seedling' and abs(temp - 24) > 5: health -= 10 # sensitive
         
         health += random.uniform(-5, 5) # Noise
