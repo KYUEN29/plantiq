@@ -119,7 +119,18 @@ const DashboardPage = ({ onBack }) => {
       }
     });
 
-    return { chartData: pivoted, plantNames: names, plantStats: stats, insights: generatedInsights };
+    // Normalize: ensure every row has a key for every plant (null if missing)
+    const normalizedData = pivoted.map(row => {
+      const newRow = { ...row };
+      names.forEach(name => {
+        if (!(name in newRow)) {
+          newRow[name] = null;
+        }
+      });
+      return newRow;
+    });
+
+    return { chartData: normalizedData, plantNames: names, plantStats: stats, insights: generatedInsights };
   }, [rawHistory]);
 
   if (loading) {
@@ -202,7 +213,7 @@ const DashboardPage = ({ onBack }) => {
             </div>
             <div className="w-full h-96">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
+                <LineChart data={Array.isArray(chartData) ? chartData : []} margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                   <XAxis 
                     dataKey="time" 
@@ -274,7 +285,9 @@ const DashboardPage = ({ onBack }) => {
             return (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                 {plants.map(([name, info]) => {
-                  const avg = Math.round(info.scores.reduce((a,b) => a+b, 0) / info.scores.length);
+                  const avg = info.scores.length
+                    ? Math.round(info.scores.reduce((a,b) => a+b, 0) / info.scores.length)
+                    : 0;
                   const color = avg >= 80 ? 'text-green-500' : avg >= 50 ? 'text-yellow-500' : 'text-red-500';
                   const bg = avg >= 80 ? 'bg-green-50 dark:bg-green-900/20' : avg >= 50 ? 'bg-yellow-50 dark:bg-yellow-900/20' : 'bg-red-50 dark:bg-red-900/20';
                   const dotColor = PLANT_COLORS[name] || '#71717a';
