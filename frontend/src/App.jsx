@@ -9,6 +9,7 @@ import ChatWidget from './components/ChatWidget';
 import AiPanel from './components/AiPanel';
 import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
+import GardenPage from './components/GardenPage';
 import { useAuth } from './context/AuthContext';
 import { Moon, Sun, ArrowRight, Activity, Leaf, Grid3X3, Bot } from 'lucide-react';
 
@@ -39,6 +40,10 @@ function App() {
 
   if (path === '/login') return <LoginPage onNavigate={navigate} />;
   if (path === '/register') return <RegisterPage onNavigate={navigate} />;
+  if (path === '/garden') {
+    if (loading) return null;
+    return user ? <GardenPage /> : <LoginPage onNavigate={navigate} />;
+  }
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -113,6 +118,7 @@ function App() {
               <Activity className="w-4 h-4" />
               Dashboard
             </button>
+            {user && <button onClick={() => navigate('/garden')} className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50"><Leaf className="w-4 h-4" />My Garden</button>}
             <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1"></div>
             <button
               onClick={toggleDarkMode}

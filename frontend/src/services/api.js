@@ -83,3 +83,21 @@ export const logout = async () => {
   const response = await request('/auth/logout', { method: 'POST' });
   if (!response.ok) throw new Error('Unable to end your session.');
 };
+
+const gardenRequest = async (path, options = {}) => {
+  const response = await request(path, options);
+  if (response.status === 204) return null;
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.detail || 'Unable to update your garden.');
+  return data;
+};
+
+export const getPlantCatalogue = () => gardenRequest('/plants');
+export const getGarden = () => gardenRequest('/garden');
+export const addGardenPlant = (payload) => gardenRequest('/garden', {
+  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+});
+export const updateGardenPlant = (id, payload) => gardenRequest(`/garden/${id}`, {
+  method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+});
+export const deleteGardenPlant = (id) => gardenRequest(`/garden/${id}`, { method: 'DELETE' });
