@@ -10,7 +10,7 @@ KNOWN_PLANTS = [
     'Peace Lily', 'Spider Plant', 'Areca Palm', 'Fern', 'Jade Plant'
 ]
 
-SYSTEM_PROMPT = """You are Plantiq AI — a world-class, friendly plant care expert and data analyst.
+SYSTEM_PROMPT = """You are Plantiq — a world-class, friendly plant care expert and data analyst.
 
 Your role:
 - Answer ANY question about plant care, health, watering, sunlight, soil, fertilization, pests, and propagation.
@@ -74,9 +74,8 @@ def process_query_with_llm(query: str, context: dict = None) -> str:
     """
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
 
-    # Log key status on every call so the server console confirms it's loaded
     if api_key:
-        logger.info(f"GEMINI_API_KEY loaded (length={len(api_key)}, prefix={api_key[:8]}...)")
+        logger.info("Gemini API key is configured.")
     else:
         logger.warning("GEMINI_API_KEY not set — returning keyword fallback.")
         return _fallback_response(query)

@@ -7,9 +7,13 @@ import ResultsDashboard from './components/ResultsDashboard';
 import DashboardPage from './components/DashboardPage';
 import ChatWidget from './components/ChatWidget';
 import AiPanel from './components/AiPanel';
+import LoginPage from './components/LoginPage';
+import RegisterPage from './components/RegisterPage';
+import { useAuth } from './context/AuthContext';
 import { Moon, Sun, ArrowRight, Activity, Leaf, Grid3X3, Bot } from 'lucide-react';
 
 function App() {
+  const { user, loading, logout } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
   
   const [view, setView] = useState('GRID'); // GRID, WIZARD, RESULTS, DASHBOARD
@@ -20,6 +24,21 @@ function App() {
   const [isAiPanelOpen, setIsAiPanelOpen] = useState(false);
   
   const gridRef = useRef(null);
+
+  const path = window.location.pathname;
+  const navigate = (nextPath) => {
+    window.history.pushState({}, '', nextPath);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
+  const [, setLocationVersion] = useState(0);
+  React.useEffect(() => {
+    const onPopState = () => setLocationVersion((value) => value + 1);
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  if (path === '/login') return <LoginPage onNavigate={navigate} />;
+  if (path === '/register') return <RegisterPage onNavigate={navigate} />;
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -68,7 +87,7 @@ function App() {
           >
             <Leaf className="w-6 h-6 text-green-500" />
             <span className="text-xl font-bold font-sans tracking-tight text-green-700 dark:text-green-400">
-              Plantiq AI
+              Plantiq
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -109,6 +128,15 @@ function App() {
             >
               <Bot className="w-4 h-4" /> AI Panel
             </button>
+            {!loading && (user ? (
+              <button onClick={async () => { await logout(); navigate('/'); }} className="px-3 py-2 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-green-600">
+                Sign out
+              </button>
+            ) : (
+              <button onClick={() => navigate('/login')} className="px-3 py-2 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-green-600">
+                Sign in
+              </button>
+            ))}
           </div>
         </div>
       </nav>
@@ -190,4 +218,3 @@ function App() {
 }
 
 export default App;
-

@@ -23,7 +23,7 @@ const Hero = ({ onScrollToGrid }) => {
           </h1>
           
           <p className="mt-4 text-xl text-gray-600 dark:text-gray-300 mb-10 max-w-2xl mx-auto">
-            Plantiq AI monitors your plant's environment, learns its ideal conditions, and gives you real-time recommendations for perfect health.
+            Plantiq monitors your plant's environment and gives you real-time recommendations for plant care.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -47,4 +47,3 @@ const Hero = ({ onScrollToGrid }) => {
 };
 
 export default Hero;
-

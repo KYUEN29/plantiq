@@ -11,7 +11,10 @@ from google.genai import types
 from routes.predict import router as predict_router
 from routes.chat import ChatRequest  # Import the existing model
 from routes.history import router as history_router
+from routes.auth import router as auth_router
+from routes.plants import router as plants_router
 from services.ml_service import ml_service
+from config import get_settings
 
 # Client creation for the new google-genai SDK
 client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY'))
@@ -21,6 +24,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # ── App setup ─────────────────────────────────────────────────────────────────
+settings = get_settings()
+
 app = FastAPI(
     title="🌿 Smart Plant Monitoring API V2 (Multi-Plant)",
     description="AI-powered plant health prediction using Random Forest pipelines",
@@ -29,12 +34,15 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=list(settings.cors_origins),
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.include_router(predict_router)
+app.include_router(auth_router)
+app.include_router(plants_router)
 # chat_router inclusion removed to use the direct route below
 app.include_router(history_router)
 

@@ -3,6 +3,11 @@ const predictionCache = new Map();
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+const request = (path, options = {}) => fetch(`${BASE_URL}${path}`, {
+  credentials: 'include',
+  ...options,
+});
+
 export const predictPlantHealth = async (payload) => {
   const cacheKey = JSON.stringify(payload);
 
@@ -11,7 +16,7 @@ export const predictPlantHealth = async (payload) => {
     return predictionCache.get(cacheKey);
   }
 
-  const response = await fetch(`${BASE_URL}/predict`, {
+  const response = await request('/predict', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ plants: payload })
@@ -32,7 +37,7 @@ export const predictPlantHealth = async (payload) => {
 };
 
 export const getHistoryDashboard = async () => {
-    const response = await fetch(`${BASE_URL}/history`);
+    const response = await request('/history');
     if (!response.ok) {
         throw new Error("Unable to parse historical datasets.");
     }
@@ -40,7 +45,7 @@ export const getHistoryDashboard = async () => {
 }
 
 export const askChatAssistant = async (queryString, context = {}) => {
-    const response = await fetch(`${BASE_URL}/chat`, {
+    const response = await request('/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: queryString, context })
@@ -51,3 +56,30 @@ export const askChatAssistant = async (queryString, context = {}) => {
     const data = await response.json();
     return data.reply;
 }
+
+const authRequest = async (path, payload) => {
+  const response = await request(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.detail || 'Authentication request failed.');
+  return data;
+};
+
+export const register = (payload) => authRequest('/auth/register', payload);
+export const login = (payload) => authRequest('/auth/login', payload);
+
+export const getCurrentUser = async () => {
+  const response = await request('/auth/me');
+  if (response.status === 401) return null;
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.detail || 'Unable to check your session.');
+  return data;
+};
+
+export const logout = async () => {
+  const response = await request('/auth/logout', { method: 'POST' });
+  if (!response.ok) throw new Error('Unable to end your session.');
+};

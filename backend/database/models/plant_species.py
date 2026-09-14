@@ -9,7 +9,7 @@ class PlantSpecies(Base, TimestampMixin):
 
     id = Column(GUID, primary_key=True, default=uuid.uuid4)
     common_name = Column(String(255), nullable=False, index=True)
-    scientific_name = Column(String(255), nullable=True)
+    scientific_name = Column(String(255), nullable=False, unique=True)
     aliases = Column(JSON, nullable=True)
     category = Column(String(100), nullable=True, index=True)
     difficulty = Column(String(50), nullable=True)
@@ -34,6 +34,8 @@ class PlantSpecies(Base, TimestampMixin):
     light_requirement = Column(String(100), nullable=True)
     sunlight_hours_min = Column(Float, nullable=True)
     sunlight_hours_ideal = Column(Float, nullable=True)
+    sunlight_hours_ideal_min = Column(Float, nullable=True)
+    sunlight_hours_ideal_max = Column(Float, nullable=True)
     sunlight_hours_max = Column(Float, nullable=True)
     
     # Water & Soil
@@ -63,6 +65,7 @@ class PlantSpecies(Base, TimestampMixin):
     seasonal_care = Column(JSON, nullable=True)
     common_problems = Column(JSON, nullable=True)
     care_guidelines = Column(JSON, nullable=True)
+    source_references = Column(JSON, nullable=True)
     image_url = Column(String(500), nullable=True)
 
     # Relationships

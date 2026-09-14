@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send, Bot, User, Sparkles } from 'lucide-react';
+import { askChatAssistant } from '../services/api';
 
 const QUICK_SUGGESTIONS = [
   "How are my plants doing?",
@@ -50,18 +51,7 @@ const ChatWidget = ({ latestResults }) => {
       : {};
 
     try {
-      const response = await fetch('https://plantiq-p6he.onrender.com/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userQuery })
-      });
-
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-
-      const data = await response.json();
-      const reply = data.reply;
+      const reply = await askChatAssistant(userQuery, sessionContext);
       
       setMessages(prev => [...prev, { id: Date.now() + 1, text: reply, sender: 'ai' }]);
     } catch (err) {
@@ -182,4 +172,3 @@ const ChatWidget = ({ latestResults }) => {
 };
 
 export default ChatWidget;
-
