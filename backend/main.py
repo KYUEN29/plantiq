@@ -65,4 +65,13 @@ def health_check():
         raise HTTPException(status_code=503, detail="Models not loaded")
     return {"status": "ok"}
 
+from database.connection import check_db_connection
+
+@app.get("/health/db", tags=["Health"])
+def db_health_check():
+    result = check_db_connection()
+    if result.get("status") != "connected":
+        raise HTTPException(status_code=503, detail=f"Database connection failed: {result.get('error')}")
+    return result
+
 # updated: gemini-sdk-fix — forces Render to reinstall with google-generativeai>=0.8.0

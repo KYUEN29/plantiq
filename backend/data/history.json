@@ -1,0 +1,24 @@
+[
+  {
+    "timestamp": "2026-09-14T11:51:17.147333",
+    "plants": [
+      {
+        "name": "Snake Plant",
+        "water": "Slightly dry",
+        "sunlight": "Partial shade",
+        "color": "Healthy green",
+        "soil": "Moist"
+      }
+    ],
+    "predictions": [
+      {
+        "plant": "Snake Plant",
+        "watering": "Maintain current watering schedule.",
+        "sunlight": "Current sunlight exposure is optimal.",
+        "fertilizer": "Use standard liquid fertilizer once a month.",
+        "health": "Healthy",
+        "confidence": "Moderate"
+      }
+    ]
+  }
+]
