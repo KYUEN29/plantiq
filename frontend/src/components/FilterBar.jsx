@@ -1,25 +1,9 @@
 import React from 'react';
 import { Star, SlidersHorizontal } from 'lucide-react';
-import { DUMMY_PLANTS } from './PlantGrid';
 
-const AI_RECOMMENDED_IDS = [2, 4, 5, 7];
+const filters = ['All Plants', 'Low Light', 'Air Purifying', 'Pet Friendly', 'Succulents'];
 
 const FilterBar = ({ activeFilter, onFilterChange }) => {
-  const filters = [
-    'All Plants',
-    'Low Light',
-    'Air Purifying',
-    'Pet Friendly',
-    'Succulents',
-  ];
-
-  // Calculate count for each filter
-  const getCount = (filter) => {
-    if (filter === 'All Plants') return DUMMY_PLANTS.length;
-    if (filter === 'AI Recommended') return AI_RECOMMENDED_IDS.length;
-    return DUMMY_PLANTS.filter(p => p.tags.some(t => t.toLowerCase() === filter.toLowerCase())).length;
-  };
-
   return (
     <div className="mb-10">
       <div className="flex items-center gap-2 mb-4">
@@ -34,13 +18,10 @@ const FilterBar = ({ activeFilter, onFilterChange }) => {
             className={`px-5 py-2 rounded-full text-sm font-medium transition-all duration-200 active:scale-95 hover:scale-[1.03] ${
               activeFilter === filter
                 ? 'bg-green-600 text-white shadow-md shadow-green-600/20'
-                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-50 dark:hover:border-gray-300'
             }`}
           >
             {filter}
-            <span className={`ml-1.5 text-xs font-bold ${activeFilter === filter ? 'text-green-100' : 'text-gray-400'}`}>
-              {getCount(filter)}
-            </span>
           </button>
         ))}
         <button
@@ -53,9 +34,6 @@ const FilterBar = ({ activeFilter, onFilterChange }) => {
         >
           <Star className="w-4 h-4 fill-current" />
           AI Recommended
-          <span className={`text-xs font-bold ${activeFilter === 'AI Recommended' ? 'text-yellow-100' : 'text-yellow-500/60'}`}>
-            {getCount('AI Recommended')}
-          </span>
         </button>
       </div>
     </div>
@@ -63,5 +41,3 @@ const FilterBar = ({ activeFilter, onFilterChange }) => {
 };
 
 export default FilterBar;
-
-

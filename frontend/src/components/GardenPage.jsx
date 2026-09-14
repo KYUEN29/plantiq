@@ -4,6 +4,11 @@ import { addGardenPlant, deleteGardenPlant, getGarden, getPlantCatalogue, update
 
 const emptyForm = { plant_species_id: '', nickname: '', growth_stage: '', soil_type: '', pot_size: '', location: '', notes: '' };
 
+const navigate = (path) => {
+  window.history.pushState({}, '', path);
+  window.dispatchEvent(new PopStateEvent('popstate'));
+};
+
 const GardenPage = () => {
   const [garden, setGarden] = useState([]);
   const [catalogue, setCatalogue] = useState([]);
@@ -16,7 +21,6 @@ const GardenPage = () => {
   const [notice, setNotice] = useState('');
 
   const load = async () => {
-    setLoading(true);
     try {
       const [plants, species] = await Promise.all([getGarden(), getPlantCatalogue()]);
       setGarden(plants);
@@ -24,6 +28,10 @@ const GardenPage = () => {
     } catch (err) { setError(err.message); } finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
+
+  const handleBackToDashboard = () => {
+    navigate('/');
+  };
 
   const updateForm = (field) => (event) => setForm({ ...form, [field]: event.target.value });
   const openAdd = () => { setError(''); setNotice(''); setEditingId(null); setForm(emptyForm); setShowForm(true); };
@@ -62,7 +70,14 @@ const GardenPage = () => {
 
   return <section className="max-w-6xl mx-auto space-y-8">
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div><p className="text-sm font-semibold uppercase tracking-wider text-green-700">My Garden</p><h1 className="mt-1 text-4xl font-bold">Your plants, in one place.</h1><p className="mt-2 text-gray-600 dark:text-gray-400">Build plant profiles now; assessments come later.</p></div>
+      <div className="flex items-center gap-2">
+        <p className="text-sm font-semibold uppercase tracking-wider text-green-700">My Garden</p>
+        <h1 className="mt-1 text-4xl font-bold">Your plants, in one place.</h1>
+        <p className="mt-2 text-gray-600 dark:text-gray-400">Build plant profiles now; assessments come later.</p>
+        <button onClick={handleBackToDashboard} className="ml-4 inline-flex items-center gap-2 text-sm font-medium text-green-600 hover:text-green-800 transition-colors">
+          ← Back to Dashboard
+        </button>
+      </div>
       <button onClick={openAdd} className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 font-bold text-white hover:bg-green-700"><Plus className="w-5 h-5" />Add plant</button>
     </div>
     {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">{error}</p>}
