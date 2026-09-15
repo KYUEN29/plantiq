@@ -68,13 +68,15 @@ const ResultsDashboard = ({ payload, onRestart, onResultsLoaded }) => {
   }
 
   if (error) {
+    const isUnsupportedSpecies = /not yet available|supports 10 species/i.test(error || '');
     return (
       <div className="py-20 text-center animate-in fade-in slide-in-from-bottom-8 duration-500">
         <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/50 shadow-inner mb-6">
           <AlertTriangle className="w-10 h-10 text-red-500" />
         </div>
-        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Analysis Rejected</h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto text-lg">{error}</p>
+        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">{isUnsupportedSpecies ? 'Prediction unavailable for this plant' : 'Analysis Rejected'}</h2>
+        <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-md mx-auto text-lg">{error}</p>
+        {isUnsupportedSpecies && <p className="text-gray-500 dark:text-gray-500 mb-8 max-w-md mx-auto text-sm">Plantiq holds 40 plants in its catalogue; quantitative prediction covers 10 species for now. You can still save an assessment from My Garden.</p>}
         <button onClick={onRestart} className="px-8 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-bold hover:scale-105 active:scale-95 transition-all shadow-lg">Revise Selection</button>
       </div>
     );

@@ -10,6 +10,8 @@ import AiPanel from './components/AiPanel';
 import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import GardenPage from './components/GardenPage';
+import AssessmentPage from './components/AssessmentPage';
+import AssessmentQueuePage from './components/AssessmentQueuePage';
 import { useAuth } from './context/AuthContext';
 import { Moon, Sun, ArrowRight, Activity, Leaf, Grid3X3, Bot } from 'lucide-react';
 
@@ -43,6 +45,18 @@ function App() {
   if (path === '/garden') {
     if (loading) return null;
     return user ? <GardenPage /> : <LoginPage onNavigate={navigate} />;
+  }
+  if (path.startsWith('/assess/queue/')) {
+    if (loading) return null;
+    if (!user) return <LoginPage onNavigate={navigate} />;
+    const plantIds = path.split('/')[3].split(',').filter(Boolean);
+    return <AssessmentQueuePage plantIds={plantIds} />;
+  }
+  if (path.startsWith('/assess/')) {
+    if (loading) return null;
+    if (!user) return <LoginPage onNavigate={navigate} />;
+    const plantId = path.split('/')[2];
+    return <AssessmentPage plantId={plantId} />;
   }
 
   const toggleDarkMode = () => {

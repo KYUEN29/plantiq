@@ -94,6 +94,7 @@ const gardenRequest = async (path, options = {}) => {
 
 export const getPlantCatalogue = () => gardenRequest('/plants');
 export const getGarden = () => gardenRequest('/garden');
+export const getGardenPlant = (id) => gardenRequest(`/garden/${id}`);
 export const addGardenPlant = (payload) => gardenRequest('/garden', {
   method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
 });
@@ -101,3 +102,17 @@ export const updateGardenPlant = (id, payload) => gardenRequest(`/garden/${id}`,
   method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
 });
 export const deleteGardenPlant = (id) => gardenRequest(`/garden/${id}`, { method: 'DELETE' });
+
+const assessmentRequest = async (path, options = {}) => {
+  const response = await request(path, options);
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.detail || 'Unable to save your assessment.');
+  return data;
+};
+
+export const getQuestionnaire = () => assessmentRequest('/questionnaires/current');
+export const getQuestionnaireQuestions = () => assessmentRequest('/questionnaires/current/questions');
+export const submitAssessment = (payload) => assessmentRequest('/assessments', {
+  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+});
+export const getAssessment = (id) => assessmentRequest(`/assessments/${id}`);

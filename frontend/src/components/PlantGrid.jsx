@@ -12,6 +12,7 @@ const PlantGrid = ({ selectedPlants, onTogglePlant, activeFilter = 'All Plants' 
       try {
         const catalogue = await getPlantCatalogue();
         const mapped = catalogue.map((plant) => ({
+          id: plant.id,
           image: plant.image_url,
           name: plant.common_name,
           description: plant.description,
@@ -29,7 +30,7 @@ const PlantGrid = ({ selectedPlants, onTogglePlant, activeFilter = 'All Plants' 
       }
     };
     loadPlants();
-  }, [selectedPlants, onTogglePlant, activeFilter]);
+  }, []);
 
   if (loading) {
     return <div className="py-24 text-center text-gray-500">Loading plant catalogue…</div>;
@@ -41,11 +42,6 @@ const PlantGrid = ({ selectedPlants, onTogglePlant, activeFilter = 'All Plants' 
 
   const filteredPlants = plants.filter((plant) => {
     if (activeFilter === 'All Plants') return true;
-    if (activeFilter === 'AI Recommended') {
-      return selectedPlants.some(
-        (p) => plant.name && selectedPlants.some((sp) => sp.name === plant.name)
-      );
-    }
     return plant.tags.some(
       (tag) => tag.toLowerCase() === activeFilter.toLowerCase()
     );
@@ -61,9 +57,9 @@ const PlantGrid = ({ selectedPlants, onTogglePlant, activeFilter = 'All Plants' 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredPlants.map((plant) => (
             <PlantCard
-              key={plant.name}
+              key={plant.id}
               plant={plant}
-              isSelected={selectedPlants.some((p) => p.name === plant.name)}
+              isSelected={selectedPlants.some((p) => p.id === plant.id)}
               onToggle={() => onTogglePlant(plant)}
             />
           ))}

@@ -14,6 +14,6 @@ def validate_supported_plants(plants):
             
     if unsupported:
         raise HTTPException(
-            status_code=400, 
-            detail=f"Unsupported plant(s) detected: {', '.join(unsupported)}. Only the official 10 curated indoor plants are supported."
+            status_code=400,
+            detail=f"Quantitative prediction is not yet available for {', '.join(unsupported)}. Your assessment has been saved. ML prediction currently supports 10 species."
         )

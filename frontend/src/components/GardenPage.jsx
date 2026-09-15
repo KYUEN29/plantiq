@@ -19,6 +19,7 @@ const GardenPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const load = async () => {
     try {
@@ -59,10 +60,19 @@ const GardenPage = () => {
       closeForm();
     } catch (err) { setError(err.message); } finally { setSubmitting(false); }
   };
+  const toggleSelect = (plantId) => {
+    setSelectedIds((prev) => prev.includes(plantId) ? prev.filter((id) => id !== plantId) : [...prev, plantId]);
+  };
+
+  const assessSelected = () => {
+    if (selectedIds.length === 0) return;
+    navigate(`/assess/queue/${selectedIds.join(',')}`);
+  };
+
   const remove = async (plant) => {
     if (!window.confirm(`Remove ${plant.nickname} from your garden?`)) return;
     setError(''); setNotice('');
-    try { await deleteGardenPlant(plant.id); setGarden(garden.filter((item) => item.id !== plant.id)); setNotice('Plant removed from your garden.'); }
+    try { await deleteGardenPlant(plant.id); setGarden(garden.filter((item) => item.id !== plant.id)); setSelectedIds((prev) => prev.filter((id) => id !== plant.id)); setNotice('Plant removed from your garden.'); }
     catch (err) { setError(err.message); }
   };
 
@@ -78,7 +88,10 @@ const GardenPage = () => {
           ← Back to Dashboard
         </button>
       </div>
-      <button onClick={openAdd} className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 font-bold text-white hover:bg-green-700"><Plus className="w-5 h-5" />Add plant</button>
+      <div className="flex flex-col sm:flex-row gap-2">
+        {selectedIds.length > 0 && <button onClick={assessSelected} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 font-bold text-white hover:bg-emerald-800">Assess Selected ({selectedIds.length})</button>}
+        <button onClick={openAdd} className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 font-bold text-white hover:bg-green-700"><Plus className="w-5 h-5" />Add plant</button>
+      </div>
     </div>
     {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">{error}</p>}
     {notice && <p className="rounded-xl border border-green-200 bg-green-50 p-4 text-green-800">{notice}</p>}
@@ -95,7 +108,7 @@ const GardenPage = () => {
       <label className="mt-4 block text-sm font-semibold">Notes<textarea value={form.notes} onChange={updateForm('notes')} maxLength="5000" rows="3" className="mt-1.5 w-full rounded-xl border p-3 text-gray-900" /></label>
       <button disabled={submitting} className="mt-5 rounded-xl bg-green-600 px-5 py-3 font-bold text-white disabled:opacity-60">{submitting ? 'Saving…' : editingId ? 'Save changes' : 'Add plant'}</button>
     </form>}
-    {garden.length === 0 ? <div className="rounded-3xl border border-dashed border-green-300 bg-green-50/60 px-6 py-16 text-center"><Leaf className="mx-auto mb-4 w-10 h-10 text-green-600" /><h2 className="text-2xl font-bold">Your garden is ready to grow.</h2><p className="mt-2 text-gray-600">Add your first plant from the Plantiq catalogue.</p><button onClick={openAdd} className="mt-6 rounded-xl bg-green-600 px-5 py-3 font-bold text-white">Add your first plant</button></div> : <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{garden.map((plant) => <article key={plant.id} className="rounded-3xl border bg-white p-6 shadow-sm dark:bg-gray-800 dark:border-gray-700"><div className="flex justify-between gap-3"><div><h2 className="text-xl font-bold">{plant.nickname}</h2><p className="mt-1 text-sm font-medium text-green-700">{plant.plant_species.common_name}</p><p className="text-sm italic text-gray-500">{plant.plant_species.scientific_name}</p></div><Leaf className="w-6 h-6 text-green-500" /></div><div className="mt-5 space-y-2 text-sm text-gray-600 dark:text-gray-300">{plant.growth_stage && <p>Stage: {plant.growth_stage}</p>}{plant.location && <p className="flex gap-1"><MapPin className="w-4 h-4" />{plant.location}</p>}<p>Added {new Date(plant.date_added).toLocaleDateString()}</p></div><div className="mt-6 flex gap-2"><button onClick={() => openEdit(plant)} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-sm font-semibold"><Edit3 className="w-4 h-4" />Edit</button><button onClick={() => remove(plant)} className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700"><Trash2 className="w-4 h-4" />Remove</button></div></article>)}</div>}
+    {garden.length === 0 ? <div className="rounded-3xl border border-dashed border-green-300 bg-green-50/60 px-6 py-16 text-center"><Leaf className="mx-auto mb-4 w-10 h-10 text-green-600" /><h2 className="text-2xl font-bold">Your garden is ready to grow.</h2><p className="mt-2 text-gray-600">Add your first plant from the Plantiq catalogue.</p><button onClick={openAdd} className="mt-6 rounded-xl bg-green-600 px-5 py-3 font-bold text-white">Add your first plant</button></div> : <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{garden.map((plant) => <article key={plant.id} className="rounded-3xl border bg-white p-6 shadow-sm dark:bg-gray-800 dark:border-gray-700"><div className="flex justify-between gap-3"><div className="flex items-start gap-2"><input type="checkbox" checked={selectedIds.includes(plant.id)} onChange={() => toggleSelect(plant.id)} aria-label={`Select ${plant.nickname} for assessment`} className="mt-1 w-4 h-4 accent-green-600" /><div><h2 className="text-xl font-bold">{plant.nickname}</h2><p className="mt-1 text-sm font-medium text-green-700">{plant.plant_species.common_name}</p><p className="text-sm italic text-gray-500">{plant.plant_species.scientific_name}</p></div></div><Leaf className="w-6 h-6 text-green-500" /></div><div className="mt-5 space-y-2 text-sm text-gray-600 dark:text-gray-300">{plant.growth_stage && <p>Stage: {plant.growth_stage}</p>}{plant.location && <p className="flex gap-1"><MapPin className="w-4 h-4" />{plant.location}</p>}<p>Added {new Date(plant.date_added).toLocaleDateString()}</p></div><div className="mt-6 flex flex-wrap gap-2"><button onClick={() => navigate(`/assess/${plant.id}`)} className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700">Assess Plant</button><button onClick={() => openEdit(plant)} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-sm font-semibold"><Edit3 className="w-4 h-4" />Edit</button><button onClick={() => remove(plant)} className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700"><Trash2 className="w-4 h-4" />Remove</button></div></article>)}</div>}
   </section>;
 };
 

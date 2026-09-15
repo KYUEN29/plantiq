@@ -1,6 +1,10 @@
 def preprocess_input(data: dict) -> dict:
     known_plants = ['Money Plant', 'Snake Plant', 'Tulsi', 'Aloe Vera', 'Monstera', 'Peace Lily', 'Spider Plant', 'Areca Palm', 'Fern', 'Jade Plant']
-    plant_type = data['name'] if data['name'] in known_plants else 'Fern'
+    if data['name'] not in known_plants:
+        raise ValueError(
+            f"Quantitative prediction is not yet available for '{data['name']}'. ML prediction currently supports 10 species."
+        )
+    plant_type = data['name']
 
     if data['water'] == "Overwatered":
         wf = 7.0

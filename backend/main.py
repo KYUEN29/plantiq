@@ -14,6 +14,8 @@ from routes.history import router as history_router
 from routes.auth import router as auth_router
 from routes.plants import router as plants_router
 from routes.garden import router as garden_router
+from routes.questionnaires import router as questionnaires_router
+from routes.assessments import router as assessments_router
 from services.ml_service import ml_service
 from config import get_settings
 
@@ -45,6 +47,8 @@ app.include_router(predict_router)
 app.include_router(auth_router)
 app.include_router(plants_router)
 app.include_router(garden_router)
+app.include_router(questionnaires_router)
+app.include_router(assessments_router)
 # chat_router inclusion removed to use the direct route below
 app.include_router(history_router)
 
