@@ -88,6 +88,7 @@ const AssessmentQueuePage = ({ plantIds }) => {
             <div key={r.plantId} className="flex items-center gap-3 text-sm">
               {r.ok ? <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" /> : <XCircle className="w-5 h-5 text-red-500 flex-shrink-0" />}
               <span className="font-semibold flex-1">{r.nickname}</span>
+              {r.ok && r.healthScore !== undefined && <span className="text-gray-500">{r.healthScore}/100 · {r.healthStatus}</span>}
               {!r.ok && <span className="text-red-600">{r.error || 'Failed'}</span>}
               {!r.ok && r.plantId && byId.has(r.plantId) && (
                 <button onClick={() => navigate(`/assess/${r.plantId}`)} className="font-semibold text-green-600 hover:text-green-800">Retry</button>
@@ -118,7 +119,7 @@ const AssessmentQueuePage = ({ plantIds }) => {
         queueLabel={`Plant ${index + 1} of ${queue.length}`}
         onExit={() => navigate('/garden')}
         onSkip={() => recordAndAdvance({ plantId: currentId, nickname: current?.nickname || 'Unknown plant', ok: false, error: 'Skipped' })}
-        onSaved={(result) => recordAndAdvance({ plantId: currentId, nickname: current?.nickname || 'Unknown plant', ok: true, assessmentId: result.id })}
+        onSaved={(result) => recordAndAdvance({ plantId: currentId, nickname: current?.nickname || 'Unknown plant', ok: true, assessmentId: result.id, healthScore: result.result?.health_score, healthStatus: result.result?.health_status })}
       />
     </section>
   );

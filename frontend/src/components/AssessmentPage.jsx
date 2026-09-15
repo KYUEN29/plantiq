@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardList, Leaf } from 'lucide-react';
+import AssessmentResult from './AssessmentResult';
 import { getGardenPlant, getQuestionnaire, submitAssessment } from '../services/api';
 
 const navigate = (path) => {
@@ -147,14 +148,26 @@ const AssessmentPage = ({ plantId, onSaved, onExit, onSkip, queueLabel }) => {
   }
 
   if (saved) {
+    const result = saved.result;
     return (
-      <section className="max-w-3xl mx-auto space-y-6 py-12 text-center">
-        <CheckCircle2 className="mx-auto w-14 h-14 text-green-600" />
-        <h1 className="text-3xl font-bold">Assessment saved.</h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          Your answers for <strong>{plant?.nickname}</strong> are stored and will be used for plant-care predictions in a later phase. No prediction is run yet.
-        </p>
-        <p className="text-xs text-gray-400">Assessment ID: {saved.id}</p>
+      <section className="max-w-3xl mx-auto space-y-6 py-12">
+        <div className="text-center">
+          <CheckCircle2 className="mx-auto w-14 h-14 text-green-600" />
+          <h1 className="mt-4 text-3xl font-bold">Assessment saved.</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
+            Your answers for <strong>{plant?.nickname}</strong> are stored{result ? ` — health score ${result.health_score}/100 (${result.health_status}, ${result.confidence} confidence)` : ''}.
+          </p>
+          <p className="mt-1 text-xs text-gray-400">Assessment ID: {saved.id}</p>
+        </div>
+        {result && <AssessmentResult result={result} nickname={plant?.nickname} assessmentId={saved.id} guidance={saved.guidance} />}
+        {saved.personalization && [...(saved.personalization.plant?.notes || []), ...(saved.personalization.user?.notes || [])].length > 0 && (
+          <div className="rounded-3xl border border-green-200 bg-green-50/60 p-6 dark:bg-green-900/10 dark:border-green-900/40">
+            <h2 className="font-bold">Based on your previous assessments…</h2>
+            <ul className="mt-2 space-y-1 text-sm text-gray-700 dark:text-gray-200">
+              {[...(saved.personalization.plant?.notes || []), ...(saved.personalization.user?.notes || [])].map((note, i) => <li key={i}>• {note}</li>)}
+            </ul>
+          </div>
+        )}
         <div className="flex flex-wrap justify-center gap-3">
           <button onClick={() => navigate('/garden')} className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-5 py-3 font-bold text-white hover:bg-green-700">
             <ArrowLeft className="w-5 h-5" />Back to My Garden

@@ -30,3 +30,8 @@ class UserResponse(BaseModel):
 
 class AuthResponse(BaseModel):
     user: UserResponse
+
+
+class PreferencesUpdate(BaseModel):
+    experience_level: Optional[str] = Field(None, pattern="^(beginner|intermediate|experienced)$")
+    care_preference: Optional[str] = Field(None, pattern="^(simple|balanced|detailed)$")

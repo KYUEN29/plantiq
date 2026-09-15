@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 from sqlalchemy import Column, String, Text, Float, Integer, JSON, ForeignKey, DateTime, func
 from sqlalchemy.orm import relationship
 from database.base import Base, GUID
@@ -17,7 +18,15 @@ class Assessment(Base):
     ml_output = Column(JSON, nullable=True)
     recommendations = Column(JSON, nullable=True)
     ai_explanation = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    # Immutable Phase 8 snapshot of the deterministic engine result at creation
+    # time, so historical display never changes when curated knowledge evolves.
+    result = Column(JSON, nullable=True)
+    # Client-side microsecond timestamp: SQLite's CURRENT_TIMESTAMP only has
+    # 1-second resolution, which ties back-to-back queue submissions and breaks
+    # chronological history/analytics ordering. The server default remains as a
+    # fallback for raw SQL inserts; no DDL change, so no migration is needed.
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc),
+                        server_default=func.now(), nullable=False)
 
     # Relationships
     user_plant = relationship("UserPlant", back_populates="assessments")

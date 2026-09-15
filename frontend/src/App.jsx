@@ -12,8 +12,10 @@ import RegisterPage from './components/RegisterPage';
 import GardenPage from './components/GardenPage';
 import AssessmentPage from './components/AssessmentPage';
 import AssessmentQueuePage from './components/AssessmentQueuePage';
+import HistoryPage from './components/HistoryPage';
+import PlantHistoryPage from './components/PlantHistoryPage';
 import { useAuth } from './context/AuthContext';
-import { Moon, Sun, ArrowRight, Activity, Leaf, Grid3X3, Bot } from 'lucide-react';
+import { Moon, Sun, ArrowRight, Activity, Leaf, Grid3X3, Bot, History } from 'lucide-react';
 
 function App() {
   const { user, loading, logout } = useAuth();
@@ -45,6 +47,15 @@ function App() {
   if (path === '/garden') {
     if (loading) return null;
     return user ? <GardenPage /> : <LoginPage onNavigate={navigate} />;
+  }
+  if (path === '/history') {
+    if (loading) return null;
+    return user ? <HistoryPage /> : <LoginPage onNavigate={navigate} />;
+  }
+  if (path.startsWith('/garden/') && path.endsWith('/history')) {
+    if (loading) return null;
+    if (!user) return <LoginPage onNavigate={navigate} />;
+    return <PlantHistoryPage plantId={path.split('/')[2]} />;
   }
   if (path.startsWith('/assess/queue/')) {
     if (loading) return null;
@@ -133,6 +144,7 @@ function App() {
               Dashboard
             </button>
             {user && <button onClick={() => navigate('/garden')} className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50"><Leaf className="w-4 h-4" />My Garden</button>}
+            {user && <button onClick={() => navigate('/history')} className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50"><History className="w-4 h-4" />History</button>}
             <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1"></div>
             <button
               onClick={toggleDarkMode}

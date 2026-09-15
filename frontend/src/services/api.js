@@ -116,3 +116,21 @@ export const submitAssessment = (payload) => assessmentRequest('/assessments', {
   method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
 });
 export const getAssessment = (id) => assessmentRequest(`/assessments/${id}`);
+export const getAssessments = (limit = 20, offset = 0) =>
+  assessmentRequest(`/assessments?limit=${limit}&offset=${offset}`);
+export const getPlantAssessments = (plantId, limit = 20, offset = 0) =>
+  assessmentRequest(`/assessments/garden/${plantId}/assessments?limit=${limit}&offset=${offset}`);
+export const getPlantAnalytics = (plantId) =>
+  assessmentRequest(`/assessments/garden/${plantId}/analytics`);
+export const getPersonalization = (plantId) =>
+  assessmentRequest(`/assessments/garden/${plantId}/personalization`);
+export const submitFeedback = (assessmentId, payload) => assessmentRequest(`/assessments/${assessmentId}/feedback`, {
+  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+});
+export const getFeedback = (assessmentId) => assessmentRequest(`/assessments/${assessmentId}/feedback`);
+export const requestExplanation = (assessmentId) => assessmentRequest(`/assessments/${assessmentId}/explanation`, {
+  method: 'POST',
+});
+export const updatePreferences = (payload) => assessmentRequest('/auth/me', {
+  method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+});

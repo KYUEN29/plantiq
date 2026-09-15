@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from database.connection import get_db
 from database.models.user import User
-from schemas.auth import RegisterRequest, LoginRequest, UserResponse, AuthResponse
+from schemas.auth import RegisterRequest, LoginRequest, UserResponse, AuthResponse, PreferencesUpdate
 from utils.auth_helpers import (
     hash_password,
     verify_password,
@@ -94,6 +94,22 @@ def login(payload: LoginRequest, response: Response, db: Session = Depends(get_d
 def get_me(current_user: User = Depends(get_current_user)):
     """Returns the profile of the currently authenticated user."""
     return UserResponse.model_validate(current_user)
+
+
+@router.patch("/me", response_model=UserResponse)
+def update_preferences(
+    payload: PreferencesUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Updates the caller's personalization preferences (validated values only)."""
+    user = db.query(User).filter(User.id == current_user.id).one()
+    updates = payload.model_dump(exclude_unset=True)
+    for field, value in updates.items():
+        setattr(user, field, value)
+    db.commit()
+    db.refresh(user)
+    return UserResponse.model_validate(user)
 
 
 @router.post("/logout")
