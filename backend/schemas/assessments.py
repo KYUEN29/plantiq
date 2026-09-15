@@ -123,12 +123,17 @@ class GuidanceRecommendationResponse(BaseModel):
     priority: str
     reason: str
     source: str
+    action_type: Optional[str] = None
+    what_to_watch: Optional[str] = None
 
 
 class GuidanceResponse(BaseModel):
     recommendations: list[GuidanceRecommendationResponse]
     personalization_notes: list[str]
     limitations: list[str]
+    next_best_action: Optional[GuidanceRecommendationResponse] = None
+    historical_comparison: Optional[dict] = None
+
 
 
 class ExplanationResponse(BaseModel):
@@ -238,3 +243,15 @@ class FeedbackResponse(BaseModel):
     helpfulness: Optional[str] = None
     reasons: list[str] = []
     created_at: datetime
+
+class NextQuestionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    question: Optional[dict] = None  # Holds QuestionResponse dict
+    progress: Optional[int] = None  # Number of answered questions
+    total_estimated: Optional[int] = None  # Estimated total questions for this interview
+
+class AnswerSubmission(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    question_id: UUID
+    value: Any
+    finalize: Optional[bool] = False

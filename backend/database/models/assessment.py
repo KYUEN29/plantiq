@@ -21,6 +21,10 @@ class Assessment(Base):
     # Immutable Phase 8 snapshot of the deterministic engine result at creation
     # time, so historical display never changes when curated knowledge evolves.
     result = Column(JSON, nullable=True)
+    contract_version = Column(Integer, nullable=False, default=1)
+    status = Column(String(20), nullable=False, default='in_progress')
+    structured_answers = Column(JSON, nullable=True)
+    submitted_at = Column(DateTime(timezone=True), nullable=True)
     # Client-side microsecond timestamp: SQLite's CURRENT_TIMESTAMP only has
     # 1-second resolution, which ties back-to-back queue submissions and breaks
     # chronological history/analytics ordering. The server default remains as a

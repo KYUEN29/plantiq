@@ -1,4 +1,21 @@
 import React, { useEffect, useState } from 'react';
+import { 
+  CheckCircle2, 
+  AlertTriangle, 
+  AlertCircle, 
+  Sparkles, 
+  ArrowRight, 
+  TrendingUp, 
+  TrendingDown, 
+  Minus,
+  Eye, 
+  Info,
+  Droplets,
+  Sun,
+  Layers,
+  ShieldAlert,
+  ClipboardCheck
+} from 'lucide-react';
 import { getFeedback, requestExplanation, submitFeedback } from '../services/api';
 
 const HELPFULNESS_OPTIONS = [
@@ -20,11 +37,7 @@ const REASON_OPTIONS = [
   { value: 'other', label: 'Other' },
 ];
 
-// Shared read-only renderer for a structured Phase 7 assessment result.
-// Used by the post-submit success view and by historical detail views —
-// it never regenerates a prediction, it only displays stored data.
-// Pass assessmentId to enable the feedback section for that assessment.
-const AssessmentResult = ({ result, nickname, assessmentId, guidance }) => {
+export default function AssessmentResult({ result, nickname, assessmentId, guidance, speciesKnowledge }) {
   const [existing, setExisting] = useState(null);
   const [helpfulness, setHelpfulness] = useState('');
   const [reasons, setReasons] = useState([]);
@@ -84,77 +97,263 @@ const AssessmentResult = ({ result, nickname, assessmentId, guidance }) => {
   };
 
   if (!result) return null;
+
+  const nextAction = guidance?.next_best_action;
+  const historyComp = guidance?.historical_comparison;
+  const recommendations = guidance?.recommendations || [];
+  const status = result.health_status || 'Healthy';
+  const isHealthy = status.toLowerCase() === 'healthy';
+  const isCritical = status.toLowerCase() === 'critical';
+
+  const statusSummary = isHealthy
+    ? "Your plant looks generally stable and healthy based on the information you provided."
+    : isCritical
+    ? "Several reported observations suggest this plant needs attention soon."
+    : "There are a few conditions worth adjusting before they become bigger problems.";
+
   return (
-    <div className="space-y-4 text-left">
-      <div className="rounded-3xl border bg-white p-6 shadow-sm dark:bg-gray-800 dark:border-gray-700">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-xl font-bold">
-            {result.health_score}/100 · {result.health_status}
-          </h2>
-          <span className="text-xs font-semibold text-gray-500">{result.confidence} confidence{ nickname ? ` · ${nickname}` : ''}</span>
-        </div>
-        <div className="mt-4 space-y-2">
-          {result.dimensions.map((d) => (
-            <div key={d.feature} className="flex items-start justify-between gap-3 text-sm px-4 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-              <span className="font-semibold capitalize">{d.feature.replace(/_/g, ' ')}</span>
-              <span className="text-gray-600 dark:text-gray-300 text-right">{d.detail}</span>
+    <div className="space-y-6 text-left max-w-4xl mx-auto">
+      
+      {/* 1. Condition & Score Banner */}
+      <div className={`rounded-3xl p-6 sm:p-8 border shadow-sm transition-all ${
+        isHealthy 
+          ? 'bg-gradient-to-br from-emerald-50 via-teal-50/50 to-white border-emerald-200 dark:from-emerald-950/20 dark:via-teal-950/10 dark:border-emerald-800/40' 
+          : isCritical
+          ? 'bg-gradient-to-br from-red-50 via-rose-50/50 to-white border-red-200 dark:from-red-950/20 dark:via-rose-950/10 dark:border-red-800/40'
+          : 'bg-gradient-to-br from-amber-50 via-yellow-50/50 to-white border-amber-200 dark:from-amber-950/20 dark:via-yellow-950/10 dark:border-amber-800/40'
+      }`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              {isHealthy ? (
+                <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+              ) : isCritical ? (
+                <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              ) : (
+                <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              )}
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Current Condition
+              </span>
             </div>
-          ))}
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
+              {status}
+            </h2>
+            <p className="text-slate-700 dark:text-slate-300 text-sm sm:text-base max-w-xl">
+              {statusSummary}
+            </p>
+          </div>
+
+          <div className="flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-center border-t sm:border-t-0 sm:border-l border-slate-200/60 dark:border-slate-700/60 pt-4 sm:pt-0 sm:pl-8">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Health Score</span>
+            <div className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">
+              {result.health_score}<span className="text-lg font-bold text-slate-400">/100</span>
+            </div>
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">
+              {result.confidence} confidence
+            </span>
+          </div>
         </div>
+
+        {/* Historical comparison badge if available */}
+        {historyComp && (
+          <div className="mt-5 pt-4 border-t border-slate-200/50 dark:border-slate-700/50 flex items-center gap-3 text-xs sm:text-sm font-medium">
+            {historyComp.trend === 'improving' ? (
+              <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
+                <TrendingUp className="w-4 h-4" />
+                <span>Improving: {historyComp.summary}</span>
+              </div>
+            ) : historyComp.trend === 'worsening' ? (
+              <div className="flex items-center gap-1.5 text-rose-700 dark:text-rose-400">
+                <TrendingDown className="w-4 h-4" />
+                <span>Attention: {historyComp.summary}</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
+                <Minus className="w-4 h-4" />
+                <span>Steady: {historyComp.summary}</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
-      {guidance && guidance.recommendations.length > 0 && (
-        <div className="rounded-3xl border bg-white p-6 shadow-sm dark:bg-gray-800 dark:border-gray-700">
-          <h2 className="text-xl font-bold">Recommended Actions</h2>
-          <div className="mt-4 space-y-2">
-            {guidance.recommendations.map((rec) => (
-              <div key={rec.code} className="px-4 py-3 rounded-2xl border text-sm bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/30">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-semibold flex-1">{rec.title}</p>
-                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/70 dark:bg-black/30 border border-green-200 dark:border-green-800/40">{rec.priority}</span>
-                  {rec.source === 'personalized' && <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-600 text-white">Personalized</span>}
+
+      {/* 2. Primary Next Best Action */}
+      {nextAction && (
+        <div className="rounded-3xl border-2 border-emerald-500/40 bg-emerald-50/50 dark:bg-emerald-950/20 p-6 sm:p-7 shadow-sm">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 mb-2">
+            <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span>Next Best Action</span>
+          </div>
+          <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+            {nextAction.title}
+          </h3>
+          <p className="text-slate-700 dark:text-slate-200 text-sm sm:text-base leading-relaxed mb-4">
+            {nextAction.description}
+          </p>
+          {nextAction.what_to_watch && (
+            <div className="bg-white/70 dark:bg-slate-900/60 rounded-2xl p-4 border border-emerald-200/50 dark:border-emerald-800/30 text-xs sm:text-sm text-slate-700 dark:text-slate-300 flex items-start gap-2.5">
+              <Eye className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold text-slate-900 dark:text-white">What to watch: </span>
+                {nextAction.what_to_watch}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 3. Prioritized Care Prescription */}
+      {recommendations.length > 0 && (
+        <div className="rounded-3xl border bg-white dark:bg-slate-900 dark:border-slate-800 p-6 sm:p-7 shadow-sm">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
+            Your Care Prescription
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">
+            Prioritized actions based on observed evidence and plant needs.
+          </p>
+
+          <div className="space-y-4">
+            {recommendations.map((rec, index) => (
+              <div 
+                key={rec.code || index}
+                className="p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 flex items-center justify-center font-bold text-xs">
+                      {index + 1}
+                    </span>
+                    <span className="font-bold text-slate-900 dark:text-white text-base">
+                      {rec.title}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {rec.action_type && (
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                        {rec.action_type}
+                      </span>
+                    )}
+                    <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                      rec.priority === 'high'
+                        ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300'
+                        : rec.priority === 'medium'
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                        : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+                    }`}>
+                      {rec.priority} Priority
+                    </span>
+                  </div>
                 </div>
-                <p className="mt-1 text-gray-700 dark:text-gray-200">{rec.description}</p>
-                <p className="mt-1 text-xs text-gray-500">{rec.reason}</p>
+
+                <p className="text-slate-700 dark:text-slate-200 text-sm leading-relaxed mb-3">
+                  {rec.description}
+                </p>
+
+                {rec.what_to_watch && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400 italic">
+                    <strong className="font-semibold text-slate-600 dark:text-slate-300">Watch for: </strong> 
+                    {rec.what_to_watch}
+                  </p>
+                )}
               </div>
             ))}
           </div>
         </div>
       )}
-      {guidance && guidance.personalization_notes.length > 0 && (
-        <div className="rounded-3xl border border-green-200 bg-green-50/60 p-6 dark:bg-green-900/10 dark:border-green-900/40">
-          <h2 className="font-bold">Personalized for you</h2>
-          <ul className="mt-2 space-y-1 text-sm text-gray-700 dark:text-gray-200">
-            {guidance.personalization_notes.map((note, i) => <li key={i}>• {note}</li>)}
+
+      {/* 4. What Plantiq Noticed (Findings & Dimensions) */}
+      <div className="rounded-3xl border bg-white dark:bg-slate-900 dark:border-slate-800 p-6 sm:p-7 shadow-sm">
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
+          What Plantiq Noticed
+        </h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+          Structured observations evaluated across specific plant care dimensions.
+        </p>
+
+        <div className="grid gap-3">
+          {(result.dimensions || []).map((d) => (
+            <div 
+              key={d.feature} 
+              className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800/60 text-sm"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
+                  {d.feature.includes('water') ? <Droplets className="w-4 h-4" /> :
+                   d.feature.includes('light') ? <Sun className="w-4 h-4" /> :
+                   d.feature.includes('symptom') ? <ShieldAlert className="w-4 h-4" /> :
+                   <Layers className="w-4 h-4" />}
+                </div>
+                <span className="font-semibold capitalize text-slate-800 dark:text-slate-200">
+                  {d.feature.replace(/_/g, ' ')}
+                </span>
+              </div>
+              <span className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm sm:text-right max-w-md">
+                {d.detail}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 5. Personalized Guidance Context */}
+      {guidance && guidance.personalization_notes && guidance.personalization_notes.length > 0 && (
+        <div className="rounded-3xl border border-emerald-200 bg-emerald-50/60 p-6 dark:bg-emerald-950/20 dark:border-emerald-800/40">
+          <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+            <ClipboardCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            Based on your history
+          </h3>
+          <ul className="space-y-1.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
+            {guidance.personalization_notes.map((note, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold">•</span>
+                <span>{note}</span>
+              </li>
+            ))}
           </ul>
         </div>
       )}
+
+      {/* 6. AI Explanation (Constrained reasoning layer) */}
       {assessmentId && (
-        <div className="rounded-3xl border bg-white p-6 shadow-sm dark:bg-gray-800 dark:border-gray-700">
-          <h2 className="text-xl font-bold">AI Explanation</h2>
+        <div className="rounded-3xl border bg-white dark:bg-slate-900 dark:border-slate-800 p-6 sm:p-7 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="w-5 h-5 text-indigo-500" />
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">AI Care Explanation</h3>
+          </div>
+
           {!explanation ? (
-            <div className="mt-3">
-              <p className="text-sm text-gray-500 mb-3">Get a plain-language explanation of this assessment, grounded in your plant's documented care facts.</p>
-              {explanationError && <p role="alert" className="text-sm text-red-600 mb-3">{explanationError}</p>}
+            <div>
+              <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+                Get a personalized explanation of these findings grounded in verified plant knowledge.
+              </p>
+              {explanationError && (
+                <p role="alert" className="text-sm text-red-600 mb-3">{explanationError}</p>
+              )}
               <button
                 onClick={handleExplain}
                 disabled={explaining}
-                className="rounded-xl bg-indigo-500 px-5 py-2.5 font-bold text-white text-sm hover:bg-indigo-600 disabled:opacity-60"
+                className="rounded-xl bg-indigo-600 px-5 py-2.5 font-bold text-white text-sm hover:bg-indigo-700 transition disabled:opacity-60"
               >
-                {explaining ? 'Explaining…' : 'Explain with AI'}
+                {explaining ? 'Generating explanation…' : 'Explain with AI'}
               </button>
             </div>
           ) : explanation.available ? (
-            <div className="mt-3 text-sm text-gray-700 dark:text-gray-200 whitespace-pre-line">
+            <div className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-line leading-relaxed">
               {explanation.explanation}
-              {explanation.cached && <p className="mt-2 text-xs text-gray-400">Previously generated explanation.</p>}
+              {explanation.cached && (
+                <p className="mt-3 text-xs text-slate-400">Previously generated explanation.</p>
+              )}
             </div>
           ) : (
-            <div className="mt-3">
-              <p className="text-sm text-gray-600 dark:text-gray-300">{explanation.message || 'AI explanation is temporarily unavailable. Your assessment and care recommendations are still available.'}</p>
+            <div>
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                {explanation.message || 'AI explanation is temporarily unavailable. Your deterministic care prescription remains active.'}
+              </p>
               <button
                 onClick={handleExplain}
                 disabled={explaining}
-                className="mt-3 rounded-xl border px-4 py-2 font-bold text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60"
+                className="mt-3 rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 font-bold text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 {explaining ? 'Retrying…' : 'Try again'}
               </button>
@@ -162,60 +361,56 @@ const AssessmentResult = ({ result, nickname, assessmentId, guidance }) => {
           )}
         </div>
       )}
-      {result.issues.length > 0 && (
-        <div className="rounded-3xl border bg-white p-6 shadow-sm dark:bg-gray-800 dark:border-gray-700">
-          <h2 className="text-xl font-bold">Detected issues</h2>
-          <div className="mt-4 space-y-2">
-            {result.issues.map((issue) => (
-              <div key={issue.code} className="px-4 py-3 rounded-2xl border text-sm bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800/30">
-                <p className="font-semibold">{issue.title}</p>
-                {issue.evidence.map((e, i) => <p key={i} className="mt-1 text-gray-600 dark:text-gray-300">{e}</p>)}
-              </div>
-            ))}
+
+      {/* 7. Information Limitations */}
+      {result.limitations && result.limitations.length > 0 && (
+        <div className="rounded-2xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/30 p-5 text-xs text-slate-500 dark:text-slate-400">
+          <div className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300 mb-2">
+            <Info className="w-4 h-4" />
+            <span>Scope & Limitations</span>
           </div>
-        </div>
-      )}
-      {result.recommendations.length > 0 && (
-        <div className="rounded-3xl border bg-white p-6 shadow-sm dark:bg-gray-800 dark:border-gray-700">
-          <h2 className="text-xl font-bold">Recommendations</h2>
-          <ul className="mt-4 space-y-2 text-sm text-gray-700 dark:text-gray-200">
-            {result.recommendations.map((rec, i) => <li key={i} className="px-4 py-3 bg-green-50 dark:bg-green-900/20 rounded-2xl border border-green-200 dark:border-green-800/30">{rec.text}</li>)}
+          <ul className="space-y-1">
+            {result.limitations.map((lim, i) => (
+              <li key={i}>• {lim}</li>
+            ))}
           </ul>
         </div>
       )}
-      {result.limitations.length > 0 && (
-        <div className="rounded-3xl border bg-white p-6 shadow-sm dark:bg-gray-800 dark:border-gray-700">
-          <h2 className="text-xl font-bold">Information limitations</h2>
-          <ul className="mt-4 space-y-1 text-sm text-gray-500">
-            {result.limitations.map((lim, i) => <li key={i}>• {lim}</li>)}
-          </ul>
-        </div>
-      )}
+
+      {/* 8. Assessment Feedback */}
       {assessmentId && (
-        <div className="rounded-3xl border bg-white p-6 shadow-sm dark:bg-gray-800 dark:border-gray-700">
-          <h2 className="text-xl font-bold">Was this assessment helpful?</h2>
-          <p className="mt-1 text-sm text-gray-500">Your feedback helps personalize future recommendations.</p>
+        <div className="rounded-3xl border bg-white dark:bg-slate-900 dark:border-slate-800 p-6 sm:p-7 shadow-sm">
+          <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">
+            Was this assessment helpful?
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+            Your feedback helps personalize future guidance.
+          </p>
+
           {loading ? (
-            <p className="mt-4 text-sm text-gray-500">Loading your feedback…</p>
+            <p className="text-xs text-slate-400">Loading your feedback…</p>
           ) : (
-            <div className="mt-4 space-y-4">
+            <div className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 {HELPFULNESS_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
                     onClick={() => setHelpfulness(opt.value)}
-                    className={`px-5 py-2 rounded-full text-sm font-medium transition-all active:scale-95 ${
+                    className={`px-5 py-2 rounded-full text-xs sm:text-sm font-medium transition ${
                       helpfulness === opt.value
-                        ? 'bg-green-600 text-white shadow-md shadow-green-600/20'
-                        : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
                     }`}
                   >
                     {opt.label}
                   </button>
                 ))}
               </div>
+
               <div>
-                <p className="text-sm font-semibold mb-2">What was useful or not useful? (optional)</p>
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  What was useful or not useful? (optional)
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {REASON_OPTIONS.map((opt) => {
                     const selected = reasons.includes(opt.value);
@@ -223,10 +418,10 @@ const AssessmentResult = ({ result, nickname, assessmentId, guidance }) => {
                       <button
                         key={opt.value}
                         onClick={() => toggleReason(opt.value)}
-                        className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95 ${
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
                           selected
-                            ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200 border border-green-300 dark:border-green-700'
-                            : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                            ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700'
+                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
                         }`}
                       >
                         {opt.label}
@@ -235,12 +430,18 @@ const AssessmentResult = ({ result, nickname, assessmentId, guidance }) => {
                   })}
                 </div>
               </div>
-              {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-              {existing && <p className="text-sm text-green-700 dark:text-green-300">Thanks — your feedback is saved and helps personalize future guidance.</p>}
+
+              {error && <p role="alert" className="text-xs text-red-600">{error}</p>}
+              {existing && (
+                <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                  Thanks — your feedback is saved and helps tailor future care.
+                </p>
+              )}
+
               <button
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="rounded-xl bg-green-600 px-5 py-2.5 font-bold text-white hover:bg-green-700 disabled:opacity-60 text-sm"
+                className="rounded-xl bg-emerald-600 px-5 py-2.5 font-bold text-white hover:bg-emerald-700 disabled:opacity-60 text-xs sm:text-sm transition"
               >
                 {submitting ? 'Saving…' : existing ? 'Update feedback' : 'Submit feedback'}
               </button>
@@ -248,8 +449,7 @@ const AssessmentResult = ({ result, nickname, assessmentId, guidance }) => {
           )}
         </div>
       )}
+
     </div>
   );
-};
-
-export default AssessmentResult;
+}

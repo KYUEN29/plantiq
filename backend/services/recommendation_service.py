@@ -51,8 +51,8 @@ def _light_requirement_text(species) -> str:
     return str(requirement).replace("_", " ") if requirement else "its preferred light"
 
 
-def build_guidance(result: dict, species, personalization: dict | None, preferences: dict | None) -> dict:
-    """Enrich a frozen engine result into structured, personalized guidance."""
+def build_guidance(result: dict, species, personalization: dict | None, preferences: dict | None, historical_comparison: dict | None = None) -> dict:
+    """Enrich a frozen engine result into structured, personalized guidance and care prescription."""
     preferences = preferences or {}
     experience = preferences.get("experience_level")
     care = preferences.get("care_preference")
@@ -63,7 +63,7 @@ def build_guidance(result: dict, species, personalization: dict | None, preferen
 
     recommendations = []
 
-    def add(code, title, description, priority, reason, source, evidence=()):
+    def add(code, title, description, priority, reason, source, evidence=(), action_type=None, what_to_watch=None):
         if source not in VALID_SOURCES:
             source = "assessment"
         recommendations.append({
@@ -73,6 +73,8 @@ def build_guidance(result: dict, species, personalization: dict | None, preferen
             "priority": priority,
             "reason": reason,
             "source": source,
+            "action_type": action_type or "OBSERVE",
+            "what_to_watch": what_to_watch,
         })
 
     for dimension in (result or {}).get("dimensions", []):
@@ -84,23 +86,31 @@ def build_guidance(result: dict, species, personalization: dict | None, preferen
             add("watering:review", "Review watering",
                 f"Your assessment suggests {plant} may be stressed by its current moisture. "
                 "Let the soil dry to its preferred level before watering again, and make sure excess water can drain away.",
-                "high", " ".join(evidence) or dimension.get("detail", ""), "assessment", evidence)
+                "high", " ".join(evidence) or dimension.get("detail", ""), "assessment", evidence,
+                action_type="WATER",
+                what_to_watch="Persistent wet soil, yellowing leaves, or worsening droop over the next 3-5 days.")
         elif finding in ("below", "above") and feature == "light":
             direction = "brighter spot" if finding == "below" else "protection from the strongest direct sun"
             add("light:adjust", "Adjust light",
                 f"Your assessment suggests {plant} would do better in a {direction} "
                 f"({plant} prefers {_light_requirement_text(species)}).",
-                "medium", " ".join(evidence) or dimension.get("detail", ""), "curated", evidence)
+                "medium", " ".join(evidence) or dimension.get("detail", ""), "curated", evidence,
+                action_type="LIGHT",
+                what_to_watch="Pale stretched growth (too little light) or bleached/scorched patches (too much direct sun).")
         elif finding == "mild" and feature == "soil":
             preferred = _species_field(species, "preferred_soil_types") or []
             add("soil:repot", "Consider repotting mix",
                 f"At the next repot, use one of {plant}'s documented preferred media: "
                 f"{', '.join(preferred) or 'a fresh well-draining mix'}.",
-                "medium", " ".join(evidence) or dimension.get("detail", ""), "curated", evidence)
+                "medium", " ".join(evidence) or dimension.get("detail", ""), "curated", evidence,
+                action_type="SOIL",
+                what_to_watch="Compacted soil that resists water penetration or stays waterlogged.")
         elif finding == "mild" and feature == "growth":
             add("growth:observe", "Observe growth",
                 f"The reported stage is atypical for {plant}. Keep watching new growth over the next few weeks.",
-                "low", " ".join(evidence) or dimension.get("detail", ""), "assessment", evidence)
+                "low", " ".join(evidence) or dimension.get("detail", ""), "assessment", evidence,
+                action_type="OBSERVE",
+                what_to_watch="New shoot vigor, leaf size, and overall color vibrancy.")
 
     for issue in (result or {}).get("issues", []):
         if not isinstance(issue, dict) or not issue.get("code"):
@@ -115,18 +125,29 @@ def build_guidance(result: dict, species, personalization: dict | None, preferen
             source = "personalized"
         else:
             title, reason, source = base_title, " ".join(evidence), "curated"
+        
+        act_type = "PEST" if "pest" in code.lower() else ("WATER" if "wilting" in code.lower() else "OBSERVE")
+        watch = "Spread to new growth or neighboring plants; inspect leaf undersides." if act_type == "PEST" else "Changes in leaf firmness and stem stability."
+
         add(f"issue:{code}", title,
             f"Possible issue for {plant}: {base_title.split('(')[0].strip().lower()}. "
             "Monitor closely and re-assess in a few days; isolate from other plants if pests are suspected.",
             "high" if issue.get("severity") == "concern" else "medium",
-            reason or base_title, source, evidence)
+            reason or base_title, source, evidence,
+            action_type=act_type,
+            what_to_watch=watch)
 
     recommendations.sort(key=lambda r: (PRIORITY_ORDER.get(r["priority"], 1), r["code"]))
     notes = list((personalization.get("plant", {}) or {}).get("notes", [])) if isinstance(personalization, dict) else []
     notes += list((personalization.get("user", {}) or {}).get("notes", [])) if isinstance(personalization, dict) else []
 
+    top_action = recommendations[0] if recommendations else None
+
     return {
         "recommendations": recommendations,
         "personalization_notes": sorted(set(notes)),
         "limitations": list((result or {}).get("limitations", [])),
+        "next_best_action": top_action,
+        "historical_comparison": historical_comparison,
     }
+

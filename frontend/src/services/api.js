@@ -93,6 +93,7 @@ const gardenRequest = async (path, options = {}) => {
 };
 
 export const getPlantCatalogue = () => gardenRequest('/plants');
+export const getPlantSpecies = (id) => gardenRequest(`/plants/${id}`);
 export const getGarden = () => gardenRequest('/garden');
 export const getGardenPlant = (id) => gardenRequest(`/garden/${id}`);
 export const addGardenPlant = (payload) => gardenRequest('/garden', {
@@ -134,3 +135,9 @@ export const requestExplanation = (assessmentId) => assessmentRequest(`/assessme
 export const updatePreferences = (payload) => assessmentRequest('/auth/me', {
   method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
 });
+
+export const getNextQuestion = (plantId) => assessmentRequest(`/assessments/${plantId}/next-question`);
+export const submitAdaptiveAnswer = (plantId, payload) => assessmentRequest(`/assessments/${plantId}/answers`, {
+  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+});
+

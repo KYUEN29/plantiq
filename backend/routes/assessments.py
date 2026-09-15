@@ -26,7 +26,10 @@ from schemas.assessments import (
     GuidanceResponse,
     PersonalizationResponse,
     PlantAnalyticsResponse,
+    NextQuestionResponse,
+    AnswerSubmission,
 )
+
 from services import explanation_service
 from services.assessment_engine import evaluate, status_for_score
 from services.personalization_service import build_context
@@ -182,7 +185,43 @@ def _assessment_guidance(db, assessment, user, result, personalization):
             "experience_level": user.experience_level,
             "care_preference": user.care_preference,
         }
-    return build_guidance(result, plant.plant_species, personalization, preferences)
+
+    # Deterministic historical comparison against previous assessment if one exists
+    historical_comparison = None
+    prev_assessment = (
+        db.query(Assessment)
+        .filter(
+            Assessment.user_plant_id == plant.id,
+            Assessment.id != assessment.id,
+            Assessment.created_at < assessment.created_at,
+        )
+        .order_by(Assessment.created_at.desc())
+        .first()
+    )
+    if prev_assessment and prev_assessment.health_score is not None and result.get("health_score") is not None:
+        prev_score = int(round(prev_assessment.health_score))
+        curr_score = result.get("health_score")
+        if curr_score > prev_score:
+            trend = "improving"
+            delta = int(round(curr_score - prev_score))
+            summary = f"Health score increased by {delta} points since previous assessment."
+        elif curr_score < prev_score:
+            trend = "worsening"
+            delta = int(round(prev_score - curr_score))
+            summary = f"Health score decreased by {delta} points since previous assessment."
+        else:
+            trend = "unchanged"
+            summary = "Health score is unchanged since previous assessment."
+
+        historical_comparison = {
+            "previous_score": prev_score,
+            "previous_status": prev_assessment.result.get("health_status") if isinstance(prev_assessment.result, dict) else None,
+            "trend": trend,
+            "summary": summary,
+        }
+
+    return build_guidance(result, plant.plant_species, personalization, preferences, historical_comparison=historical_comparison)
+
 
 
 def _current_personalization(
@@ -306,6 +345,116 @@ def create_assessment(payload: AssessmentCreate, current_user: CurrentUser, db: 
     db.commit()
     db.refresh(assessment)
     return _assessment_payload(db, assessment, current_user)
+
+@router.get("/{plant_id}/next-question", response_model=NextQuestionResponse)
+def get_next_question(plant_id: UUID, current_user: CurrentUser, db: DbSession):
+    plant = _owned_plant(db, plant_id, current_user.id)
+    assessment = (
+        db.query(Assessment)
+        .filter(Assessment.user_plant_id == plant_id, Assessment.status == "in_progress")
+        .one_or_none()
+    )
+    if assessment is None:
+        assessment = Assessment(user_plant_id=plant_id, status="in_progress", contract_version=1)
+        db.add(assessment)
+        db.flush()
+    from services.question_engine import QuestionEngine
+    from datetime import datetime
+    engine = QuestionEngine(db)
+    next_q = engine.get_next_question(plant, assessment)
+    answered = db.query(AssessmentAnswer).filter(AssessmentAnswer.assessment_id == assessment.id).count()
+    if next_q is None:
+        assessment.status = "completed"
+        assessment.submitted_at = datetime.utcnow()
+        stored_rows = (
+            db.query(AssessmentAnswer, Question)
+            .outerjoin(Question, AssessmentAnswer.question_id == Question.id)
+            .filter(AssessmentAnswer.assessment_id == assessment.id)
+            .all()
+        )
+        engine_result = _assessment_result(db, assessment, stored_rows)
+        if engine_result:
+            assessment.health_score = engine_result["health_score"]
+            assessment.confidence = engine_result["confidence"]
+            assessment.answers = {
+                q.maps_to_feature: a.answer_value
+                for a, q in stored_rows
+                if q is not None and q.maps_to_feature
+            }
+            assessment.recommendations = engine_result.get("recommendations")
+            assessment.result = engine_result
+        db.commit()
+        db.refresh(assessment)
+        return NextQuestionResponse(question=None, progress=answered, total_estimated=None)
+    q_dict = {
+        "id": next_q.id,
+        "question_text": next_q.question_text,
+        "question_type": next_q.question_type,
+        "question_order": next_q.question_order,
+        "is_required": next_q.is_required,
+        "options": next_q.options,
+        "maps_to_feature": next_q.maps_to_feature,
+    }
+    return NextQuestionResponse(question=q_dict, progress=answered, total_estimated=None)
+
+
+@router.post("/{plant_id}/answers", response_model=NextQuestionResponse)
+def submit_answer(plant_id: UUID, payload: AnswerSubmission, current_user: CurrentUser, db: DbSession):
+    plant = _owned_plant(db, plant_id, current_user.id)
+    assessment = (
+        db.query(Assessment)
+        .filter(Assessment.user_plant_id == plant_id, Assessment.status == "in_progress")
+        .one_or_none()
+    )
+    if assessment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="In-progress assessment not found.")
+    question = db.query(Question).filter(Question.id == payload.question_id).one_or_none()
+    if question is None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unknown question.")
+    
+    db.add(AssessmentAnswer(assessment_id=assessment.id, question_id=payload.question_id, answer_value=payload.value))
+    db.flush()
+    from datetime import datetime
+    if payload.finalize:
+        assessment.status = "completed"
+        assessment.submitted_at = datetime.utcnow()
+    from services.question_engine import QuestionEngine
+    engine = QuestionEngine(db)
+    next_q = engine.get_next_question(plant, assessment)
+    answered = db.query(AssessmentAnswer).filter(AssessmentAnswer.assessment_id == assessment.id).count()
+    if next_q is None:
+        assessment.status = "completed"
+        assessment.submitted_at = datetime.utcnow()
+        stored_rows = (
+            db.query(AssessmentAnswer, Question)
+            .outerjoin(Question, AssessmentAnswer.question_id == Question.id)
+            .filter(AssessmentAnswer.assessment_id == assessment.id)
+            .all()
+        )
+        engine_result = _assessment_result(db, assessment, stored_rows)
+        if engine_result:
+            assessment.health_score = engine_result["health_score"]
+            assessment.confidence = engine_result["confidence"]
+            assessment.answers = {
+                q.maps_to_feature: a.answer_value
+                for a, q in stored_rows
+                if q is not None and q.maps_to_feature
+            }
+            assessment.recommendations = engine_result.get("recommendations")
+            assessment.result = engine_result
+        db.commit()
+        db.refresh(assessment)
+        return NextQuestionResponse(question=None, progress=answered, total_estimated=None)
+    q_dict = {
+        "id": next_q.id,
+        "question_text": next_q.question_text,
+        "question_type": next_q.question_type,
+        "question_order": next_q.question_order,
+        "is_required": next_q.is_required,
+        "options": next_q.options,
+        "maps_to_feature": next_q.maps_to_feature,
+    }
+    return NextQuestionResponse(question=q_dict, progress=answered, total_estimated=None)
 
 
 @router.get("/{assessment_id}", response_model=AssessmentResponse)

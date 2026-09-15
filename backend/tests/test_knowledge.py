@@ -4,7 +4,7 @@ from uuid import uuid4
 ML_SPECIES = [
     "Epipremnum aureum",
     "Dracaena trifasciata",
-    "Ocimum tenuiflorum",
+    "Ocimum basilicum",
     "Monstera deliciosa",
     "Aloe vera",
     "Spathiphyllum spp.",

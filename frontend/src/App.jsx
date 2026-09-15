@@ -52,11 +52,7 @@ function App() {
       if (path === '/login') return <LoginPage onNavigate={navigate} />;
       if (path === '/register') return <RegisterPage onNavigate={navigate} />;
       // Fallback to landing page for logged out
-      return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 relative z-10">
-          <Hero onScrollToGrid={() => navigate('/register')} />
-        </div>
-      );
+      return <Hero onScrollToGrid={() => navigate('/register')} />;
     }
 
     // AUTHENTICATED ROUTES
@@ -158,6 +154,13 @@ function App() {
               </>
             ) : (
               <>
+                <div className="hidden md:flex items-center gap-6 mr-6 text-sm font-semibold text-gray-600 dark:text-gray-300">
+                  <a href="#how-it-works" className="hover:text-green-600 dark:hover:text-green-400 transition-colors">How it works</a>
+                  <a href="#plant-knowledge" className="hover:text-green-600 dark:hover:text-green-400 transition-colors">Plant knowledge</a>
+                  <a href="#features" className="hover:text-green-600 dark:hover:text-green-400 transition-colors">Features</a>
+                  <a href="#vision" className="hover:text-green-600 dark:hover:text-green-400 transition-colors">Vision</a>
+                </div>
+                <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1 sm:mx-2 hidden md:block"></div>
                 <button
                   onClick={toggleDarkMode}
                   className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors mr-2"
@@ -190,7 +193,7 @@ function App() {
 
       {/* Main Content Area */}
       {path !== '/login' && path !== '/register' && (
-        <main className="max-w-7xl mx-auto w-full">
+        <main className={`w-full ${user ? 'max-w-7xl mx-auto' : ''}`}>
           {renderContent()}
         </main>
       )}
