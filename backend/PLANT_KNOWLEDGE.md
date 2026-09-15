@@ -18,3 +18,9 @@ concepts such as `well_draining`, `standard_potting_mix`, and
 Each record stores concise institutional source references and no image URL is
 seeded. Update a record in the catalogue file, retain or replace its provenance,
 then rerun the seed command.
+
+Per-species symptom knowledge lives in `plant_symptoms`, seeded idempotently
+with `python -m data.seed_symptoms` from each catalogue record's
+`common_problems` (slugs humanized for display only; severity, causes, and
+actions stay NULL until curated). The quantitative ML model intentionally
+covers only 10 species; the catalogue and symptom knowledge cover all 40.

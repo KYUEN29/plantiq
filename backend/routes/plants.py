@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 
 from database.connection import get_db
 from database.models.plant_species import PlantSpecies
-from schemas.plants import PlantSpeciesResponse
+from database.models.plant_symptom import PlantSymptom
+from schemas.plants import PlantSpeciesResponse, PlantSymptomResponse
 
 
 router = APIRouter(prefix="/plants", tags=["Plant Catalogue"])
@@ -43,3 +44,16 @@ def get_plant(plant_id: UUID, db: Annotated[Session, Depends(get_db)]):
     if plant is None:
         raise HTTPException(status_code=404, detail="Plant species not found.")
     return plant
+
+
+@router.get("/{plant_id}/symptoms", response_model=list[PlantSymptomResponse])
+def get_plant_symptoms(plant_id: UUID, db: Annotated[Session, Depends(get_db)]):
+    plant = db.get(PlantSpecies, plant_id)
+    if plant is None:
+        raise HTTPException(status_code=404, detail="Plant species not found.")
+    return (
+        db.query(PlantSymptom)
+        .filter(PlantSymptom.plant_species_id == plant_id)
+        .order_by(PlantSymptom.symptom_name)
+        .all()
+    )

@@ -22,8 +22,12 @@ const Hero = ({ onScrollToGrid }) => {
             <span className="gradient-text">Assistant</span>
           </h1>
           
-          <p className="mt-4 text-xl text-gray-600 dark:text-gray-300 mb-10 max-w-2xl mx-auto">
+          <p className="mt-4 text-xl text-gray-600 dark:text-gray-300 mb-4 max-w-2xl mx-auto">
             Plantiq monitors your plant's environment and gives you real-time recommendations for plant care.
+          </p>
+
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-10">
+            40 plants in the curated catalogue · quantitative ML predictions currently available for 10 species.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

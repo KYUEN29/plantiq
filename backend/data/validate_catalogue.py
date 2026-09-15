@@ -2,6 +2,7 @@
 
 from database.connection import SessionLocal
 from database.models.plant_species import PlantSpecies
+from database.models.plant_symptom import PlantSymptom
 
 
 ALLOWED_CATEGORIES = {"indoor_foliage", "succulent", "tropical", "flowering", "herb", "edible", "garden", "other"}
@@ -32,11 +33,29 @@ def _ordered(*values) -> None:
     assert populated == sorted(populated), f"Invalid ordered range: {values}"
 
 
+def validate_symptom_knowledge(session) -> None:
+    """Verify every catalogue plant has symptom knowledge without duplicates."""
+    species_ids = {str(plant.id) for plant in session.query(PlantSpecies).all()}
+    assert len(species_ids) == 40, f"Expected 40 species, found {len(species_ids)}."
+    symptoms = session.query(PlantSymptom).all()
+    seen = set()
+    covered = set()
+    for symptom in symptoms:
+        assert symptom.plant_species_id is not None, "Symptom knowledge must reference a catalogue plant."
+        key = (str(symptom.plant_species_id), symptom.symptom_name)
+        assert key not in seen, f"Duplicate symptom knowledge: {key}."
+        seen.add(key)
+        covered.add(str(symptom.plant_species_id))
+    assert covered == species_ids, "Every catalogue plant must have symptom knowledge."
+
+
 def main() -> None:
     session = SessionLocal()
     try:
         validate_catalogue(session)
         print("Plant catalogue validation passed: 40 unique, structurally valid records.")
+        validate_symptom_knowledge(session)
+        print("Plant symptom validation passed: all 40 species covered, no duplicates.")
     finally:
         session.close()
 
