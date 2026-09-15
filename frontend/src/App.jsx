@@ -1,12 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Hero from './components/Hero';
-import FilterBar from './components/FilterBar';
-import PlantGrid from './components/PlantGrid';
-import WizardFlow from './components/WizardFlow';
-import ResultsDashboard from './components/ResultsDashboard';
-import DashboardPage from './components/DashboardPage';
-import ChatWidget from './components/ChatWidget';
-import AiPanel from './components/AiPanel';
 import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import GardenPage from './components/GardenPage';
@@ -14,94 +7,103 @@ import AssessmentPage from './components/AssessmentPage';
 import AssessmentQueuePage from './components/AssessmentQueuePage';
 import HistoryPage from './components/HistoryPage';
 import PlantHistoryPage from './components/PlantHistoryPage';
+import AuthenticatedHomePage from './components/AuthenticatedHomePage';
+import AskPlantiqPage from './components/AskPlantiqPage';
+import PlantProfilePage from './components/PlantProfilePage';
 import { useAuth } from './context/AuthContext';
-import { Moon, Sun, ArrowRight, Activity, Leaf, Grid3X3, Bot, History } from 'lucide-react';
+import { Moon, Sun, Leaf, Home, Grid3X3, History, MessageSquare, User, LogOut } from 'lucide-react';
 
 function App() {
   const { user, loading, logout } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
   
-  const [view, setView] = useState('GRID'); // GRID, WIZARD, RESULTS, DASHBOARD
-  const [selectedPlants, setSelectedPlants] = useState([]);
-  const [payload, setPayload] = useState(null);
-  const [latestResults, setLatestResults] = useState(null);
-  const [activeFilter, setActiveFilter] = useState('All Plants');
-  const [isAiPanelOpen, setIsAiPanelOpen] = useState(false);
-  
-  const gridRef = useRef(null);
-
   const path = window.location.pathname;
   const navigate = (nextPath) => {
     window.history.pushState({}, '', nextPath);
     window.dispatchEvent(new PopStateEvent('popstate'));
   };
+  
   const [, setLocationVersion] = useState(0);
-  React.useEffect(() => {
+  useEffect(() => {
     const onPopState = () => setLocationVersion((value) => value + 1);
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
-
-  if (path === '/login') return <LoginPage onNavigate={navigate} />;
-  if (path === '/register') return <RegisterPage onNavigate={navigate} />;
-  if (path === '/garden') {
-    if (loading) return null;
-    return user ? <GardenPage /> : <LoginPage onNavigate={navigate} />;
-  }
-  if (path === '/history') {
-    if (loading) return null;
-    return user ? <HistoryPage /> : <LoginPage onNavigate={navigate} />;
-  }
-  if (path.startsWith('/garden/') && path.endsWith('/history')) {
-    if (loading) return null;
-    if (!user) return <LoginPage onNavigate={navigate} />;
-    return <PlantHistoryPage plantId={path.split('/')[2]} />;
-  }
-  if (path.startsWith('/assess/queue/')) {
-    if (loading) return null;
-    if (!user) return <LoginPage onNavigate={navigate} />;
-    const plantIds = path.split('/')[3].split(',').filter(Boolean);
-    return <AssessmentQueuePage plantIds={plantIds} />;
-  }
-  if (path.startsWith('/assess/')) {
-    if (loading) return null;
-    if (!user) return <LoginPage onNavigate={navigate} />;
-    const plantId = path.split('/')[2];
-    return <AssessmentPage plantId={plantId} />;
-  }
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
     document.documentElement.classList.toggle('dark');
   };
 
-  const handleScrollToGrid = () => {
-    gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+  // Ensure authentication loading state is handled correctly.
+  // Do not briefly render private content while /auth/me is loading.
+  if (loading) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'dark bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
 
-  const handleTogglePlant = (plant) => {
-    if (selectedPlants.find(p => p.id === plant.id)) {
-      setSelectedPlants(selectedPlants.filter(p => p.id !== plant.id));
-    } else {
-      setSelectedPlants([...selectedPlants, plant]);
+  // Define route matching logic
+  const renderContent = () => {
+    // PUBLIC ROUTES
+    if (!user) {
+      if (path === '/login') return <LoginPage onNavigate={navigate} />;
+      if (path === '/register') return <RegisterPage onNavigate={navigate} />;
+      // Fallback to landing page for logged out
+      return (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 relative z-10">
+          <Hero onScrollToGrid={() => navigate('/register')} />
+        </div>
+      );
     }
-  };
 
-  const handleStartWizard = () => {
-    if (selectedPlants.length > 0) {
-      window.scrollTo(0, 0);
-      setView('WIZARD');
+    // AUTHENTICATED ROUTES
+    if (path === '/garden') return <GardenPage />;
+    if (path === '/history') return <HistoryPage />;
+    if (path === '/ask') return <AskPlantiqPage />;
+    if (path.startsWith('/garden/') && path.endsWith('/history')) {
+      const plantId = path.split('/')[2];
+      return <PlantHistoryPage plantId={plantId} />;
     }
+    if (path.startsWith('/garden/') && path.split('/').length === 3) {
+      const plantId = path.split('/')[2];
+      return <PlantProfilePage plantId={plantId} />;
+    }
+    if (path.startsWith('/assess/queue/')) {
+      const plantIds = path.split('/')[3].split(',').filter(Boolean);
+      return <AssessmentQueuePage plantIds={plantIds} />;
+    }
+    if (path.startsWith('/assess/')) {
+      const plantId = path.split('/')[2];
+      return <AssessmentPage plantId={plantId} />;
+    }
+    
+    // Default Authenticated Home
+    return <AuthenticatedHomePage />;
   };
 
-  const handleCompleteWizard = (payloadArray) => {
-    setPayload(payloadArray);
-    window.scrollTo(0, 0);
-    setView('RESULTS');
+  // NavItem helper
+  const NavItem = ({ href, icon: Icon, label }) => {
+    const isActive = path === href || (href !== '/' && path.startsWith(href));
+    return (
+      <button 
+        onClick={() => navigate(href)}
+        className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-sm transition-all duration-200 ${
+          isActive
+            ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800/40'
+            : 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent'
+        }`}
+      >
+        <Icon className="w-4 h-4" />
+        <span className="hidden sm:inline">{label}</span>
+      </button>
+    );
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 pb-32 ${darkMode ? 'dark bg-gray-900 text-white' : 'text-gray-900'}`}>
+    <div className={`min-h-screen transition-colors duration-300 pb-32 ${darkMode ? 'dark bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       {/* Ambient floating particles */}
       <div className="floating-particles">
         <span></span><span></span><span></span>
@@ -109,142 +111,93 @@ function App() {
       </div>
 
       {/* Sticky Navbar */}
-      <nav className="sticky top-0 z-50 glass-panel border-b border-gray-200/50 dark:border-gray-800/50">
+      <nav className="sticky top-0 z-50 glass-panel border-b border-gray-200/50 dark:border-gray-800/50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div 
             className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" 
-            onClick={() => { setView('GRID'); setSelectedPlants([]); setActiveFilter('All Plants'); window.scrollTo(0, 0); }}
+            onClick={() => navigate('/')}
           >
             <Leaf className="w-6 h-6 text-green-500" />
             <span className="text-xl font-bold font-sans tracking-tight text-green-700 dark:text-green-400">
               Plantiq
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => { setView('GRID'); setSelectedPlants([]); setActiveFilter('All Plants'); window.scrollTo(0,0); }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all duration-200 ${
-                view === 'GRID' || view === 'WIZARD' || view === 'RESULTS'
-                  ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800/40'
-                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              <Grid3X3 className="w-4 h-4" />
-              Plants
-            </button>
-            <button 
-              onClick={() => { setView('DASHBOARD'); window.scrollTo(0,0); }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all duration-200 ${
-                view === 'DASHBOARD'
-                  ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800/40'
-                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              <Activity className="w-4 h-4" />
-              Dashboard
-            </button>
-            {user && <button onClick={() => navigate('/garden')} className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50"><Leaf className="w-4 h-4" />My Garden</button>}
-            {user && <button onClick={() => navigate('/history')} className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50"><History className="w-4 h-4" />History</button>}
-            <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1"></div>
-            <button
-              onClick={toggleDarkMode}
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              aria-label="Toggle Dark Mode"
-            >
-              {darkMode ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-gray-500" />}
-            </button>
-            <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1"></div>
-            <button 
-              onClick={() => setIsAiPanelOpen(true)}
-              className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl text-xs font-bold transition-all hover:scale-105 active:scale-95 flex items-center gap-2 shadow-md shadow-indigo-500/20"
-            >
-              <Bot className="w-4 h-4" /> AI Panel
-            </button>
-            {!loading && (user ? (
-              <button onClick={async () => { await logout(); navigate('/'); }} className="px-3 py-2 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-green-600">
-                Sign out
-              </button>
+          
+          <div className="flex items-center gap-1 sm:gap-2">
+            {user ? (
+              <>
+                <NavItem href="/" icon={Home} label="Home" />
+                <NavItem href="/garden" icon={Grid3X3} label="My Garden" />
+                <NavItem href="/history" icon={History} label="Progress" />
+                <NavItem href="/ask" icon={MessageSquare} label="Ask Plantiq" />
+                
+                <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1 sm:mx-2"></div>
+                
+                <button
+                  onClick={toggleDarkMode}
+                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  aria-label="Toggle Dark Mode"
+                >
+                  {darkMode ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-gray-500" />}
+                </button>
+                
+                <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1 sm:mx-2"></div>
+                
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-green-700 dark:text-green-300">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <button 
+                    onClick={async () => { await logout(); navigate('/'); }} 
+                    className="p-2 text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400 transition-colors rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
+                    title="Sign out"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </div>
+              </>
             ) : (
-              <button onClick={() => navigate('/login')} className="px-3 py-2 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-green-600">
-                Sign in
-              </button>
-            ))}
+              <>
+                <button
+                  onClick={toggleDarkMode}
+                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors mr-2"
+                  aria-label="Toggle Dark Mode"
+                >
+                  {darkMode ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-gray-500" />}
+                </button>
+                
+                {path !== '/login' && path !== '/register' && (
+                  <>
+                    <button 
+                      onClick={() => navigate('/login')} 
+                      className="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400"
+                    >
+                      Sign In
+                    </button>
+                    <button 
+                      onClick={() => navigate('/register')} 
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-bold transition-all"
+                    >
+                      Get Started
+                    </button>
+                  </>
+                )}
+              </>
+            )}
           </div>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 relative z-10">
-        {view === 'GRID' && (
-          <div className="animate-in fade-in duration-500">
-            <Hero onScrollToGrid={handleScrollToGrid} />
-            <div ref={gridRef} className="mt-12 scroll-mt-24">
-              {/* Selection count indicator */}
-              {selectedPlants.length > 0 && (
-                <div className="mb-6 flex items-center gap-3 px-4 py-3 bg-green-50 dark:bg-green-900/20 rounded-2xl border border-green-200/50 dark:border-green-800/30">
-                  <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center font-bold text-sm">
-                    {selectedPlants.length}
-                  </div>
-                  <span className="text-green-800 dark:text-green-300 font-medium text-sm">
-                    {selectedPlants.map(p => p.name).join(', ')} selected — click <strong>Analyze</strong> below to start
-                  </span>
-                </div>
-              )}
-              <FilterBar activeFilter={activeFilter} onFilterChange={setActiveFilter} />
-              <PlantGrid selectedPlants={selectedPlants} onTogglePlant={handleTogglePlant} activeFilter={activeFilter} />
-            </div>
-          </div>
-        )}
-
-        {view === 'WIZARD' && (
-          <div className="animate-in fade-in slide-in-from-bottom-8 duration-500">
-            <WizardFlow 
-              selectedPlants={selectedPlants} 
-              onComplete={handleCompleteWizard} 
-              onCancel={() => { setView('GRID'); window.scrollTo(0, 0); }} 
-            />
-          </div>
-        )}
-
-        {view === 'RESULTS' && (
-          <ResultsDashboard 
-            payload={payload} 
-            onResultsLoaded={setLatestResults}
-            onRestart={() => { setView('GRID'); setSelectedPlants([]); setPayload(null); setLatestResults(null); window.scrollTo(0, 0); }} 
-          />
-        )}
-
-        {view === 'DASHBOARD' && (
-          <DashboardPage onBack={() => { setView('GRID'); window.scrollTo(0, 0); }} />
-        )}
-      </main>
-
-      {/* Floating Action Bar for Grid View */}
-      {view === 'GRID' && selectedPlants.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 z-40 animate-in slide-in-from-bottom-full duration-300 pointer-events-none">
-          <div className="max-w-xl mx-auto bg-gray-900/95 backdrop-blur-md dark:bg-white/95 text-white dark:text-gray-900 rounded-2xl shadow-2xl p-4 flex items-center justify-between pointer-events-auto border border-gray-800 dark:border-gray-200">
-            <div className="font-semibold text-lg flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-green-500/20 text-green-400 dark:bg-green-100 dark:text-green-600 flex items-center justify-center font-bold">
-                {selectedPlants.length}
-              </div>
-              Plant{selectedPlants.length > 1 ? 's' : ''} Ready
-            </div>
-            <button 
-              onClick={handleStartWizard}
-              className="py-3 px-6 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl transition-all hover:scale-105 active:scale-95 flex items-center gap-2 shadow-lg"
-            >
-              Analyze <ArrowRight className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
+      {/* Main Content Area */}
+      {path !== '/login' && path !== '/register' && (
+        <main className="max-w-7xl mx-auto w-full">
+          {renderContent()}
+        </main>
       )}
-
-      {/* Independent Floating Components */}
-      <ChatWidget latestResults={latestResults} />
-      <AiPanel 
-        isOpen={isAiPanelOpen} 
-        onClose={() => setIsAiPanelOpen(false)} 
-        latestResults={latestResults} 
-      />
+      
+      {/* Full page auth forms shouldn't be wrapped in max-w-7xl typically, but they render themselves */}
+      {(path === '/login' || path === '/register') && renderContent()}
+      
     </div>
   );
 }
