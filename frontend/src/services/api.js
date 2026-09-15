@@ -1,7 +1,8 @@
 // Simple in-memory cache mapped to stringified payloads
 const predictionCache = new Map();
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000')
+  .replace(/\/+$/, '');
 
 const request = (path, options = {}) => fetch(`${BASE_URL}${path}`, {
   credentials: 'include',
