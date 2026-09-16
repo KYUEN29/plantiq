@@ -20,7 +20,7 @@ os.environ["AUTH_COOKIE_SAMESITE"] = "lax"
 
 
 @pytest.fixture()
-def client(tmp_path, monkeypatch):
+def client(request, tmp_path, monkeypatch):
     database_path = tmp_path / "plantiq-test.db"
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path.as_posix()}")
 
@@ -34,7 +34,23 @@ def client(tmp_path, monkeypatch):
     import database.models  # noqa: F401 - registers all ORM models
 
     Base.metadata.create_all(bind=engine)
+    # Conditionally seed the plant catalogue unless this is the seed idempotency test
+    if request.node.name != "test_catalogue_seed_is_idempotent_and_complete":
+        from data.seed_plants import seed_catalogue
+        from database.connection import SessionLocal
+        session = SessionLocal()
+        try:
+            seed_catalogue(session)
+        finally:
+            session.close()
     with TestClient(main.app) as test_client:
+        # Register a default user for authenticated requests
+        reg_resp = test_client.post("/auth/register", json={"name": "Test User", "email": "test@example.com", "password": "testpassword"})
+        assert reg_resp.status_code == 201, reg_resp.text
         yield test_client
+    Base.metadata.drop_all(bind=engine)
+    engine.dispose()
+
+
     Base.metadata.drop_all(bind=engine)
     engine.dispose()

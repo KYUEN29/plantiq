@@ -54,8 +54,6 @@ def _answers(questions, overrides):
         feature = question["maps_to_feature"]
         if feature in overrides:
             value = overrides[feature]
-        elif question["question_type"] == "multi_choice":
-            value = [question["options"][0]["value"]]
         else:
             value = question["options"][0]["value"]
         payload.append({"question_id": question["id"], "value": value})

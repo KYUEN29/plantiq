@@ -54,8 +54,6 @@ def _answers(questions, overrides):
         feature = question["maps_to_feature"]
         if feature in overrides:
             value = overrides[feature]
-        elif question["question_type"] == "multi_choice":
-            value = [question["options"][0]["value"]]
         else:
             value = question["options"][0]["value"]
         payload.append({"question_id": question["id"], "value": value})
@@ -155,9 +153,7 @@ def test_unknown_answers_limit_confidence_without_fabrication(client):
     unknowns = {}
     for q in questions:
         values = [o["value"] for o in q["options"]]
-        if q["question_type"] == "multi_choice":
-            unknowns[q["maps_to_feature"]] = ["other"]
-        elif "unknown" in values:
+        if "unknown" in values:
             unknowns[q["maps_to_feature"]] = "unknown"
         else:
             unknowns[q["maps_to_feature"]] = values[-1]

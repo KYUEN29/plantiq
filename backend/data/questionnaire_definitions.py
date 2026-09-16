@@ -168,8 +168,8 @@ QUESTION_DEFINITIONS = [
         ],
     },
     {
-        "question_text": "How does your plant look right now? (select all that apply)",
-        "question_type": "multi_choice",
+        "question_text": "What is the main issue you are noticing with your plant right now?",
+        "question_type": "single_choice",
         "question_order": 11,
         "is_required": True,
         "maps_to_feature": "symptoms",
@@ -186,5 +186,5 @@ QUESTION_DEFINITIONS = [
             _opt("Insects/pests", "pests"),
             _opt("Other", "other"),
         ],
-    },
+    }
 ]

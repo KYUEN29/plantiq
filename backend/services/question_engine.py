@@ -64,8 +64,8 @@ FOLLOWUPS_BY_SYMPTOM = {
     ],
     "pests": [
         {
-            "question_text": "What type of pests do you see?",
-            "question_type": "multi_choice",
+            "question_text": "What type of pest is affecting your plant most noticeably?",
+            "question_type": "single_choice",
             "question_order": 201,
             "is_required": True,
             "maps_to_feature": "pest_types",

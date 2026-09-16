@@ -9,6 +9,11 @@ from data.plant_catalogue import PLANT_CATALOGUE
 
 
 def seed_catalogue(session) -> tuple[int, int]:
+    """Idempotently seed the global plant catalogue.
+
+    This function creates any missing PlantSpecies records and updates existing
+    ones without changing the logical ordering of the catalogue.
+    """
     created = updated = 0
     for values in PLANT_CATALOGUE:
         existing = session.query(PlantSpecies).filter_by(scientific_name=values["scientific_name"]).one_or_none()

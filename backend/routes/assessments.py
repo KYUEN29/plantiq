@@ -264,30 +264,34 @@ def _validate_answers(questions: list[Question], payload: AssessmentCreate) -> d
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Duplicate answer for question: {item.question_id}",
             )
-        allowed = {o["value"] for o in (question.options or []) if isinstance(o, dict) and "value" in o}
-        if question.question_type == "multi_choice":
-            if not isinstance(item.value, list) or not item.value:
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail=f"Question {item.question_id} requires a non-empty list of values.",
-                )
-            unknown = [v for v in item.value if v not in allowed]
-            if unknown:
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail=f"Invalid option for question {item.question_id}: {unknown[0]}",
-                )
+        # Determine allowed option values if options are defined.
+        if question.options:
+            allowed = {o["value"] for o in question.options if isinstance(o, dict) and "value" in o}
         else:
-            if not isinstance(item.value, str) or not item.value:
+            allowed = set()
+        # Normalize answer value: accept a single string or a list containing one string.
+        if isinstance(item.value, list):
+            if len(item.value) != 1 or not isinstance(item.value[0], str) or not item.value[0]:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail=f"Question {item.question_id} requires a single option value.",
+                    detail=f"Question {item.question_id} requires a non-empty string answer.",
                 )
-            if item.value not in allowed:
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail=f"Invalid option for question {item.question_id}: {item.value}",
-                )
+            normalized_value = item.value[0]
+        else:
+            normalized_value = item.value
+        # Validate that answer is a non-empty string.
+        if not isinstance(normalized_value, str) or not normalized_value:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Question {item.question_id} requires a non-empty string answer.",
+            )
+        # If there are defined options, ensure the answer matches one of them.
+        if allowed and normalized_value not in allowed:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid option for question {item.question_id}: {normalized_value}",
+            )
+
         seen[key] = question
 
     missing = [q for q in questions if q.is_required and str(q.id) not in seen]
@@ -363,6 +367,9 @@ def get_next_question(plant_id: UUID, current_user: CurrentUser, db: DbSession):
     engine = QuestionEngine(db)
     next_q = engine.get_next_question(plant, assessment)
     answered = db.query(AssessmentAnswer).filter(AssessmentAnswer.assessment_id == assessment.id).count()
+    if next_q is not None:
+        db.commit()
+        db.refresh(assessment)
     if next_q is None:
         assessment.status = "completed"
         assessment.submitted_at = datetime.utcnow()
@@ -422,6 +429,9 @@ def submit_answer(plant_id: UUID, payload: AnswerSubmission, current_user: Curre
     engine = QuestionEngine(db)
     next_q = engine.get_next_question(plant, assessment)
     answered = db.query(AssessmentAnswer).filter(AssessmentAnswer.assessment_id == assessment.id).count()
+    if next_q is not None:
+        db.commit()
+        db.refresh(assessment)
     if next_q is None:
         assessment.status = "completed"
         assessment.submitted_at = datetime.utcnow()

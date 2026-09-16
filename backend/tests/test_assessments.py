@@ -47,10 +47,7 @@ def _questions(client, token):
 def _valid_answers(questions):
     answers = []
     for q in questions:
-        if q["question_type"] == "multi_choice":
-            answers.append({"question_id": q["id"], "value": [q["options"][0]["value"]]})
-        else:
-            answers.append({"question_id": q["id"], "value": q["options"][0]["value"]})
+        answers.append({"question_id": q["id"], "value": q["options"][0]["value"]})
     return answers
 
 
